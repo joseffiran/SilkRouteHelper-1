@@ -121,40 +121,51 @@ async def upload_documents(
                 "document_id": document.id
             })
             
-            # For MVP, process OCR directly (will move to background task in production)
-            extracted_text = ""
+            # Process with enhanced OCR service
             try:
-                import pytesseract
-                from PIL import Image
+                from services.enhanced_ocr_service import enhanced_ocr
                 
                 # Update document status to processing
                 document.status = DocumentStatus.PROCESSING
                 db.commit()
                 
-                with Image.open(file_path) as image:
-                    extracted_text = pytesseract.image_to_string(image)
-                    
-                    # Update document with extracted data
-                    document.extracted_data = {"ocr_text": extracted_text}
-                    document.status = DocumentStatus.COMPLETED
-                    db.commit()
-                    
-                    # Update shipment with extracted data
-                    current_data = shipment.extracted_data if shipment.extracted_data else {}
-                    current_data["ocr_text"] = extracted_text
-                    current_data["processed_files"] = current_data.get("processed_files", [])
-                    current_data["processed_files"].append({
-                        "file_path": file_path,
-                        "extraction_status": "completed",
-                        "text_length": len(extracted_text),
-                        "document_id": document.id
-                    })
-                    
-                    # Update shipment in database
-                    db.query(Shipment).filter(Shipment.id == shipment_id).update({
-                        "extracted_data": current_data,
-                        "status": "completed" if extracted_text.strip() else "processing"
-                    })
+                # Use enhanced OCR with multi-language support and preprocessing
+                ocr_result = enhanced_ocr.process_document(
+                    image_path=file_path,
+                    document_type='invoice'  # Default document type for customs
+                )
+                
+                extracted_text = ocr_result['text']
+                
+                # Update document with comprehensive OCR data
+                document.extracted_data = {
+                    'ocr_text': extracted_text,
+                    'confidence': ocr_result['confidence'],
+                    'detected_language': ocr_result['detected_language'],
+                    'ocr_method': ocr_result['ocr_method'],
+                    'language_config': ocr_result['language_config'],
+                    'text_length': ocr_result['text_length'],
+                    'preprocessing_applied': ocr_result['preprocessing_applied']
+                }
+                document.status = DocumentStatus.COMPLETED
+                db.commit()
+                
+                # Update shipment with extracted data
+                current_data = shipment.extracted_data if shipment.extracted_data else {}
+                current_data["ocr_text"] = extracted_text
+                current_data["processed_files"] = current_data.get("processed_files", [])
+                current_data["processed_files"].append({
+                    "file_path": file_path,
+                    "extraction_status": "completed",
+                    "text_length": len(extracted_text),
+                    "document_id": document.id
+                })
+                
+                # Update shipment in database
+                db.query(Shipment).filter(Shipment.id == shipment_id).update({
+                    "extracted_data": current_data,
+                    "status": "completed" if extracted_text.strip() else "processing"
+                })
                     
             except ImportError:
                 print("OCR processing unavailable - pytesseract not installed")
