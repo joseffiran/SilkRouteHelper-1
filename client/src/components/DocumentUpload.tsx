@@ -94,7 +94,7 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
       case 'error':
         return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Error</Badge>;
       default:
-        return <Badge variant="outline" className="bg-red-500 text-white border-red-500">Missing</Badge>;
+        return <Badge className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-[#ff0808] text-[#ffffff]">Missing</Badge>;
     }
   };
 
@@ -183,12 +183,10 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
                             className="hidden"
                             id={`file-upload-${docType.key}`}
                           />
-                          <Label htmlFor={`file-upload-${docType.key}`} className="cursor-pointer">
-                            <Button variant="outline" size="sm" type="button" asChild>
-                              <span>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Upload
-                              </span>
+                          <Label htmlFor={`file-upload-${docType.key}`}>
+                            <Button variant="outline" size="sm" className="cursor-pointer">
+                              <Upload className="w-4 h-4 mr-2" />
+                              Upload
                             </Button>
                           </Label>
                         </div>

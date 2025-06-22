@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Clock, CheckCircle, AlertCircle, Package } from "lucide-react";
+import { format } from "date-fns";
 import AppLayout from "@/components/AppLayout";
 
 export default function DocumentsPage() {

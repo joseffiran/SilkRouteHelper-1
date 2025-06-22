@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/LoginPage";
+import AdminLoginPage from "@/pages/AdminLoginPage";
 import DashboardPage from "@/pages/DashboardPageNew";
 import ShipmentsPage from "@/pages/ShipmentsPage";
 import DocumentsPage from "@/pages/DocumentsPage";
@@ -61,6 +62,7 @@ function Router() {
           <ShipmentDetailPage />
         </ProtectedRoute>
       </Route>
+      <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin">
         <ProtectedRoute>
           <AdminPage />

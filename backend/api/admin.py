@@ -6,7 +6,8 @@ from core.database import get_db
 from models.user import User
 from models.declaration_template import DeclarationTemplate
 from models.template_field import TemplateField
-from api.auth import get_current_user, get_password_hash
+from api.auth import get_current_user
+from core.security import get_password_hash
 
 router = APIRouter()
 

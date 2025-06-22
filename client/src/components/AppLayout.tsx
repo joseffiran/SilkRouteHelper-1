@@ -19,8 +19,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: "Shipments", href: "/shipments", current: location === "/shipments" },
     { name: "Documents", href: "/documents", current: location === "/documents" },
     { name: "Reports", href: "/reports", current: location === "/reports" },
-    // Only show Admin panel to admin users
-    ...(user?.is_superuser ? [{ name: "Admin", href: "/admin", current: location === "/admin" }] : []),
   ];
 
   return (
