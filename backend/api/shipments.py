@@ -51,7 +51,7 @@ async def upload_documents(
     shipment_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    files: UploadFile = File(...)
+    file: UploadFile = File(...)
 ):
     """Upload documents for OCR processing to a specific shipment."""
     
@@ -71,30 +71,30 @@ async def upload_documents(
     
     try:
         # Process single file (wrap in list for consistent processing)
-        file_list = [files]
+        file_list = [file]
         
-        for file in file_list:
+        for uploaded_file in file_list:
             # Validate file type (images and PDFs)
-            if not file.content_type or not file.content_type.startswith(('image/', 'application/pdf')):
+            if not uploaded_file.content_type or not uploaded_file.content_type.startswith(('image/', 'application/pdf')):
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Unsupported file type: {file.content_type}. Only images and PDFs are supported."
+                    detail=f"Unsupported file type: {uploaded_file.content_type}. Only images and PDFs are supported."
                 )
             
             # Generate unique filename
-            file_extension = os.path.splitext(file.filename)[1] if file.filename else ""
+            file_extension = os.path.splitext(uploaded_file.filename)[1] if uploaded_file.filename else ""
             unique_filename = f"{uuid.uuid4()}{file_extension}"
             file_path = os.path.join(upload_dir, unique_filename)
             
             # Save uploaded file
             with open(file_path, "wb") as buffer:
-                content = await file.read()
+                content = await uploaded_file.read()
                 buffer.write(content)
             
             uploaded_files.append({
-                "original_name": file.filename,
+                "original_name": uploaded_file.filename,
                 "saved_path": file_path,
-                "content_type": file.content_type,
+                "content_type": uploaded_file.content_type,
                 "size": len(content)
             })
             

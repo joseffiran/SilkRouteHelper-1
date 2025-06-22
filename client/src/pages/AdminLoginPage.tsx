@@ -45,7 +45,10 @@ export default function AdminLoginPage() {
         title: "Admin login successful",
         description: "Redirecting to admin panel...",
       });
-      setLocation("/admin");
+      // Force a page reload to refresh auth state, then redirect
+      setTimeout(() => {
+        window.location.href = "/admin";
+      }, 500);
     },
     onError: (error: any) => {
       toast({
