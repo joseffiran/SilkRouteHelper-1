@@ -73,14 +73,15 @@ async def upload_document(
         db.commit()
         db.refresh(document)
         
-        # TODO: Trigger enhanced OCR processing task with template-based extraction
-        # For now, we'll process directly but this should be moved to background task
+        # Process document with OCR template engine
         try:
-            from workers.enhanced_ocr_worker import process_document_with_template
-            process_document_with_template.delay(document.id)
-        except ImportError:
-            # Fallback to direct processing
-            print(f"Document {document.id} uploaded, processing will be handled by background worker")
+            from backend.workers.ocr_template_engine import ocr_engine
+            # Process immediately for demo purposes (could be moved to background task)
+            extracted_data = ocr_engine.process_document(document.id)
+            logger.info(f"Document {document.id} processed successfully with OCR template engine")
+        except Exception as e:
+            logger.error(f"OCR processing failed for document {document.id}: {str(e)}")
+            # Document status will be updated by the OCR engine
         
         return document
         

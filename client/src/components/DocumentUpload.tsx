@@ -36,6 +36,7 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
   const [selectedDocumentType, setSelectedDocumentType] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadingTypes, setUploadingTypes] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -48,7 +49,7 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
       const response = await fetch(`/api/v1/shipments/${shipmentId}/documents`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: formData,
       });
@@ -66,6 +67,11 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
       });
       setSelectedFile(null);
       setSelectedDocumentType(null);
+      setUploadingTypes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(selectedDocumentType || '');
+        return newSet;
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/v1/shipments/'] });
       queryClient.invalidateQueries({ queryKey: ['/api/v1/shipments', shipmentId] });
       onUploadComplete?.();
@@ -75,6 +81,11 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
         title: "Upload failed",
         description: error.message,
         variant: "destructive",
+      });
+      setUploadingTypes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(selectedDocumentType || '');
+        return newSet;
       });
     },
   });
@@ -124,7 +135,8 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
     }
   };
 
-  const handleSubmit = (file: File, documentType: string) => {
+  const handleDirectUpload = (file: File, documentType: string) => {
+    setUploadingTypes(prev => new Set(prev).add(documentType));
     uploadMutation.mutate({ documentType, file });
   };
 
@@ -168,7 +180,7 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
                     </div>
                     <div className="ml-4 flex items-center gap-3">
                       {getStatusBadge(status)}
-                      {status === 'missing' && !isUploading && (
+                      {status === 'missing' && !uploadingTypes.has(docType.key) && (
                         <div className="flex items-center gap-2">
                           <Input
                             type="file"
@@ -177,7 +189,7 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
                               const file = e.target.files?.[0];
                               if (file) {
                                 setSelectedDocumentType(docType.key);
-                                handleSubmit(file, docType.key);
+                                handleDirectUpload(file, docType.key);
                               }
                             }}
                             className="hidden"
@@ -191,7 +203,7 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
                           </Label>
                         </div>
                       )}
-                      {isUploading && (
+                      {uploadingTypes.has(docType.key) && (
                         <div className="flex items-center gap-2">
                           <div className="text-sm text-blue-600">Uploading...</div>
                           <Progress value={45} className="w-20" />
