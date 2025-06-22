@@ -141,13 +141,13 @@ export default function ShipmentDetails({ shipment, onClose }: ShipmentDetailsPr
             <div>
               <span className="font-medium">Created:</span>
               <p className="text-muted-foreground">
-                {format(new Date(shipment.createdAt), "MMM dd, yyyy")}
+                {format(new Date((shipment as any).created_at || shipment.createdAt), "MMM dd, yyyy")}
               </p>
             </div>
             <div>
               <span className="font-medium">Last Updated:</span>
               <p className="text-muted-foreground">
-                {format(new Date(shipment.updatedAt), "MMM dd, yyyy")}
+                {format(new Date((shipment as any).updated_at || shipment.updatedAt), "MMM dd, yyyy")}
               </p>
             </div>
           </div>

@@ -188,7 +188,7 @@ export default function ShipmentsPage() {
                       {getStatusIcon(shipment.status)}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Created {new Date(shipment.createdAt).toLocaleDateString()}
+                      Created {new Date(shipment.created_at).toLocaleDateString()}
                     </p>
                   </CardHeader>
                   <CardContent>

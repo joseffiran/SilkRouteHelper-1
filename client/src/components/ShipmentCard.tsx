@@ -34,7 +34,7 @@ export default function ShipmentCard({ shipment, onViewDetails, onUploadDocument
         <div className="space-y-1">
           <CardTitle className="text-lg">{shipment.name}</CardTitle>
           <CardDescription>
-            Created {format(new Date(shipment.createdAt), "MMM dd, yyyy")}
+            Created {format(new Date((shipment as any).created_at || shipment.createdAt), "MMM dd, yyyy")}
           </CardDescription>
         </div>
         <Badge variant={getStatusBadgeVariant(shipment.status)}>
