@@ -143,7 +143,7 @@ export default function DocumentsPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Uploaded</span>
                       <span className="text-sm">
-                        {new Date(document.created_at).toLocaleDateString()}
+                        {format(new Date(document.created_at), "PPP")}
                       </span>
                     </div>
                     {document.extracted_data && Object.keys(document.extracted_data).length > 0 && (

@@ -6,7 +6,7 @@ from core.database import get_db
 from models.user import User
 from models.declaration_template import DeclarationTemplate
 from models.template_field import TemplateField
-from api.auth import get_current_user
+from api.auth import get_current_user, get_password_hash
 
 router = APIRouter()
 
@@ -166,3 +166,101 @@ async def delete_template_field(
     db.delete(field)
     db.commit()
     return {"message": "Field deleted successfully"}
+
+# User Management endpoints
+@router.get("/users/")
+async def list_users(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
+    """List all users"""
+    users = db.query(User).all()
+    return users
+
+@router.post("/users/")
+async def create_user(
+    email: str,
+    companyName: str,
+    password: str,
+    is_superuser: bool = False,
+    isActive: bool = True,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
+    """Create a new user"""
+    
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    
+    hashed_password = get_password_hash(password)
+    user = User(
+        email=email,
+        companyName=companyName,
+        hashed_password=hashed_password,
+        is_superuser=is_superuser,
+        isActive=isActive
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.put("/users/{user_id}")
+async def update_user(
+    user_id: int,
+    email: str = None,
+    companyName: str = None,
+    password: str = None,
+    is_superuser: bool = None,
+    isActive: bool = None,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
+    """Update a user"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if email is not None:
+        # Check if email is already taken by another user
+        existing_user = db.query(User).filter(User.email == email, User.id != user_id).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already taken")
+        user.email = email
+    
+    if companyName is not None:
+        user.companyName = companyName
+    
+    if password is not None:
+        user.hashed_password = get_password_hash(password)
+    
+    if is_superuser is not None:
+        user.is_superuser = is_superuser
+    
+    if isActive is not None:
+        user.isActive = isActive
+    
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
+    """Delete a user"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent admin from deleting themselves
+    if user.id == admin_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted successfully"}

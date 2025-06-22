@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, Settings, Eye, FileText, Save, X } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Eye, FileText, Save, X, User } from "lucide-react";
+import { format } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -41,8 +42,17 @@ const fieldSchema = z.object({
   }),
 });
 
+const userSchema = z.object({
+  email: z.string().email("Valid email is required"),
+  companyName: z.string().min(1, "Company name is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  is_superuser: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+});
+
 type TemplateFormData = z.infer<typeof templateSchema>;
 type FieldFormData = z.infer<typeof fieldSchema>;
+type UserFormData = z.infer<typeof userSchema>;
 
 interface Template {
   id: number;
@@ -60,13 +70,24 @@ interface TemplateField {
   extraction_rules: any;
 }
 
+interface AdminUser {
+  id: number;
+  email: string;
+  companyName: string;
+  isActive: boolean;
+  is_superuser: boolean;
+  createdAt: string;
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [editingField, setEditingField] = useState<TemplateField | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [fieldDialogOpen, setFieldDialogOpen] = useState(false);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
 
   const templateForm = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
@@ -88,6 +109,17 @@ export default function AdminPage() {
     },
   });
 
+  const userForm = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      email: "",
+      companyName: "",
+      password: "",
+      is_superuser: false,
+      isActive: true,
+    },
+  });
+
   // Fetch templates
   const { data: templates = [], isLoading: templatesLoading } = useQuery<Template[]>({
     queryKey: ["/api/v1/admin/templates"],
@@ -97,6 +129,11 @@ export default function AdminPage() {
   const { data: templateFields = [], isLoading: fieldsLoading } = useQuery<TemplateField[]>({
     queryKey: ["/api/v1/admin/templates", selectedTemplate?.id, "fields"],
     enabled: !!selectedTemplate?.id,
+  });
+
+  // Fetch users
+  const { data: users = [], isLoading: usersLoading } = useQuery<AdminUser[]>({
+    queryKey: ["/api/v1/admin/users"],
   });
 
   // Create template mutation
@@ -186,6 +223,62 @@ export default function AdminPage() {
       toast({
         title: "Field deleted",
         description: "Template field deleted successfully",
+      });
+    },
+  });
+
+  // User management mutations
+  const createUserMutation = useMutation({
+    mutationFn: async (data: UserFormData) => {
+      const response = await apiRequest("/api/v1/admin/users", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/admin/users"] });
+      setUserDialogOpen(false);
+      userForm.reset();
+      setEditingUser(null);
+      toast({
+        title: "User created",
+        description: "User created successfully",
+      });
+    },
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: Partial<UserFormData>) => {
+      const response = await apiRequest(`/api/v1/admin/users/${editingUser?.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/admin/users"] });
+      setUserDialogOpen(false);
+      userForm.reset();
+      setEditingUser(null);
+      toast({
+        title: "User updated",
+        description: "User updated successfully",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      await apiRequest(`/api/v1/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/admin/users"] });
+      toast({
+        title: "User deleted",
+        description: "User deleted successfully",
       });
     },
   });
@@ -345,6 +438,36 @@ export default function AdminPage() {
     setFieldDialogOpen(true);
   };
 
+  const openUserDialog = (user?: AdminUser) => {
+    if (user) {
+      setEditingUser(user);
+      userForm.reset({
+        email: user.email,
+        companyName: user.companyName,
+        password: "", // Don't populate password
+        is_superuser: user.is_superuser,
+        isActive: user.isActive,
+      });
+    } else {
+      setEditingUser(null);
+      userForm.reset();
+    }
+    setUserDialogOpen(true);
+  };
+
+  const onSubmitUser = (data: UserFormData) => {
+    if (editingUser) {
+      // Don't send password if it's empty when editing
+      const updateData = { ...data };
+      if (!updateData.password) {
+        delete updateData.password;
+      }
+      updateUserMutation.mutate(updateData);
+    } else {
+      createUserMutation.mutate(data);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -423,6 +546,7 @@ export default function AdminPage() {
           <TabsList>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="fields">Template Fields</TabsTrigger>
+            <TabsTrigger value="users">User Management</TabsTrigger>
           </TabsList>
 
           <TabsContent value="templates">
@@ -661,6 +785,188 @@ export default function AdminPage() {
                             variant="ghost" 
                             size="sm" 
                             onClick={() => deleteFieldMutation.mutate(field.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>User Management</CardTitle>
+                  <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add User
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingUser ? "Edit User" : "Create User"}
+                        </DialogTitle>
+                        <DialogDescription>
+                          {editingUser ? "Update user information and permissions" : "Create a new user account"}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <Form {...userForm}>
+                        <form onSubmit={userForm.handleSubmit(onSubmitUser)} className="space-y-4">
+                          <FormField
+                            control={userForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input type="email" placeholder="user@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="companyName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Company Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Company Inc." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="password"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>
+                                  Password {editingUser && "(leave empty to keep current)"}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input type="password" placeholder="Password" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="flex space-x-4">
+                            <FormField
+                              control={userForm.control}
+                              name="isActive"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">Active User</FormLabel>
+                                    <div className="text-sm text-muted-foreground">
+                                      Allow user to log in
+                                    </div>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={userForm.control}
+                              name="is_superuser"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 flex-1">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">Admin User</FormLabel>
+                                    <div className="text-sm text-muted-foreground">
+                                      Grant admin permissions
+                                    </div>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setUserDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" disabled={createUserMutation.isPending || updateUserMutation.isPending}>
+                              {editingUser ? "Update User" : "Create User"}
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {usersLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-16 bg-gray-200 rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-8">
+                    <User className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                    <p className="text-sm text-gray-500 mb-4">No users found</p>
+                    <Button onClick={() => setUserDialogOpen(true)}>
+                      Create first user
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {users.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <h3 className="font-medium">{user.email}</h3>
+                            <p className="text-sm text-gray-500">{user.companyName}</p>
+                            <p className="text-xs text-gray-400">
+                              Created: {format(new Date(user.createdAt), "PPP")}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {user.is_superuser && (
+                              <Badge variant="default">Admin</Badge>
+                            )}
+                            <Badge variant={user.isActive ? "default" : "secondary"}>
+                              {user.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => openUserDialog(user)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => deleteUserMutation.mutate(user.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

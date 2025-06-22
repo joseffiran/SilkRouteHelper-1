@@ -9,6 +9,7 @@ import { Upload, FileText, AlertCircle, CheckCircle, Package } from "lucide-reac
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { format } from "date-fns";
 
 // Document types as defined in Phase 2 requirements
 const REQUIRED_DOCUMENT_TYPES = [
@@ -93,7 +94,7 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
       case 'error':
         return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Error</Badge>;
       default:
-        return <Badge variant="outline">Missing</Badge>;
+        return <Badge variant="outline" className="bg-red-500 text-white border-red-500">Missing</Badge>;
     }
   };
 
@@ -175,16 +176,19 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                setSelectedDocumentType(docType.key);
                                 handleSubmit(file, docType.key);
                               }
                             }}
                             className="hidden"
                             id={`file-upload-${docType.key}`}
                           />
-                          <Label htmlFor={`file-upload-${docType.key}`}>
-                            <Button variant="outline" size="sm" className="cursor-pointer">
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload
+                          <Label htmlFor={`file-upload-${docType.key}`} className="cursor-pointer">
+                            <Button variant="outline" size="sm" type="button" asChild>
+                              <span>
+                                <Upload className="w-4 h-4 mr-2" />
+                                Upload
+                              </span>
                             </Button>
                           </Label>
                         </div>

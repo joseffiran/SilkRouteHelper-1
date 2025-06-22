@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Package, FileText, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import DocumentUpload from "@/components/DocumentUpload";
 import { Link } from "wouter";
+import { format } from "date-fns";
 
 interface Document {
   id: number;
@@ -163,7 +164,7 @@ export default function ShipmentDetailPage() {
                             {document.original_filename}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Uploaded {new Date(document.created_at).toLocaleString()}
+                            Uploaded {format(new Date(document.created_at), "PPp")}
                           </p>
                         </div>
                       </div>

@@ -16,7 +16,7 @@ router = APIRouter()
 @router.post("/shipments/{shipment_id}/documents", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     shipment_id: int,
-    document_type: DocumentType = Form(...),
+    document_type: str = Form(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     file: UploadFile = File(...)
@@ -54,10 +54,16 @@ async def upload_document(
         with open(file_path, "wb") as buffer:
             buffer.write(content)
         
+        # Convert string to enum
+        try:
+            doc_type_enum = DocumentType(document_type)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid document type: {document_type}")
+        
         # Create document record
         document = Document(
             shipment_id=shipment_id,
-            document_type=document_type,
+            document_type=doc_type_enum,
             original_filename=file.filename or "unknown",
             storage_path=file_path,
             status=DocumentStatus.UPLOADED
