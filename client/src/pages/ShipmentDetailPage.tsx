@@ -33,7 +33,7 @@ export default function ShipmentDetailPage() {
 
   // Poll shipment details every 3 seconds for real-time status updates
   const { data: shipment, isLoading, error } = useQuery({
-    queryKey: ['/api/shipments', shipmentId],
+    queryKey: ['/api/v1/shipments', shipmentId],
     refetchInterval: 3000, // Poll every 3 seconds as specified in Phase 2
     refetchIntervalInBackground: true,
     enabled: !!shipmentId,

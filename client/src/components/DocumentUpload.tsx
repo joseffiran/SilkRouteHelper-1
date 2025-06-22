@@ -65,8 +65,8 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
       });
       setSelectedFile(null);
       setSelectedDocumentType(null);
-      queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/shipments', shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/v1/shipments/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/v1/shipments', shipmentId] });
       onUploadComplete?.();
     },
     onError: (error: Error) => {

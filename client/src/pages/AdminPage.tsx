@@ -1,24 +1,55 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Settings, Plus, Edit, Trash2, FileText, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Edit, Trash2, Settings, Eye, FileText, Save, X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import AppLayout from "@/components/AppLayout";
 
-interface DeclarationTemplate {
+// Schema for creating/editing templates
+const templateSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  is_active: z.boolean().default(false),
+});
+
+const fieldSchema = z.object({
+  field_name: z.string().min(1, "Field name is required"),
+  label_ru: z.string().min(1, "Russian label is required"),
+  extraction_rules: z.object({
+    type: z.enum(["regex", "keyword", "position", "line_contains"]),
+    pattern: z.string().optional(),
+    keyword: z.string().optional(),
+    line_number: z.number().optional(),
+    position: z.object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number()
+    }).optional()
+  }),
+});
+
+type TemplateFormData = z.infer<typeof templateSchema>;
+type FieldFormData = z.infer<typeof fieldSchema>;
+
+interface Template {
   id: number;
   name: string;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
+  fields?: TemplateField[];
 }
 
 interface TemplateField {
@@ -27,488 +58,622 @@ interface TemplateField {
   field_name: string;
   label_ru: string;
   extraction_rules: any;
-  created_at: string;
-  updated_at: string;
 }
 
 export default function AdminPage() {
-  const [selectedTemplate, setSelectedTemplate] = useState<DeclarationTemplate | null>(null);
-  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
-  const [showCreateField, setShowCreateField] = useState(false);
-  const [editingField, setEditingField] = useState<TemplateField | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [editingField, setEditingField] = useState<TemplateField | null>(null);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [fieldDialogOpen, setFieldDialogOpen] = useState(false);
 
-  // Fetch templates
-  const { data: templates, isLoading: templatesLoading } = useQuery({
-    queryKey: ['/api/v1/admin/templates'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/v1/admin/templates/');
-      return response.json();
+  const templateForm = useForm<TemplateFormData>({
+    resolver: zodResolver(templateSchema),
+    defaultValues: {
+      name: "",
+      is_active: false,
     },
   });
 
-  // Fetch fields for selected template
-  const { data: templateFields, isLoading: fieldsLoading } = useQuery({
-    queryKey: ['/api/v1/admin/templates', selectedTemplate?.id, 'fields'],
-    queryFn: async () => {
-      const response = await apiRequest(`/api/v1/admin/templates/${selectedTemplate?.id}/fields`);
-      return response.json();
+  const fieldForm = useForm<FieldFormData>({
+    resolver: zodResolver(fieldSchema),
+    defaultValues: {
+      field_name: "",
+      label_ru: "",
+      extraction_rules: {
+        type: "regex",
+        pattern: "",
+      },
     },
-    enabled: !!selectedTemplate,
+  });
+
+  // Fetch templates
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<Template[]>({
+    queryKey: ["/api/v1/admin/templates"],
+  });
+
+  // Fetch template fields
+  const { data: templateFields = [], isLoading: fieldsLoading } = useQuery<TemplateField[]>({
+    queryKey: ["/api/v1/admin/templates", selectedTemplate?.id, "fields"],
+    enabled: !!selectedTemplate?.id,
   });
 
   // Create template mutation
   const createTemplateMutation = useMutation({
-    mutationFn: async (data: { name: string; is_active: boolean }) => {
-      const formData = new FormData();
-      formData.append('name', data.name);
-      formData.append('is_active', data.is_active.toString());
-
-      const response = await apiRequest('/api/v1/admin/templates/', {
-        method: 'POST',
-        body: formData,
+    mutationFn: async (data: TemplateFormData) => {
+      const response = await apiRequest("/api/v1/admin/templates", {
+        method: "POST",
+        body: JSON.stringify(data),
       });
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Template created successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/v1/admin/templates'] });
-      setShowCreateTemplate(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/admin/templates"] });
+      setTemplateDialogOpen(false);
+      templateForm.reset();
+      toast({
+        title: "Template created",
+        description: "Declaration template created successfully",
+      });
     },
-    onError: (error: Error) => {
-      toast({ title: "Failed to create template", description: error.message, variant: "destructive" });
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create template",
+        variant: "destructive",
+      });
     },
   });
 
   // Create field mutation
   const createFieldMutation = useMutation({
-    mutationFn: async (data: { field_name: string; label_ru: string; extraction_rules: string }) => {
-      const formData = new FormData();
-      formData.append('field_name', data.field_name);
-      formData.append('label_ru', data.label_ru);
-      formData.append('extraction_rules', data.extraction_rules);
-
+    mutationFn: async (data: FieldFormData) => {
       const response = await apiRequest(`/api/v1/admin/templates/${selectedTemplate?.id}/fields`, {
-        method: 'POST',
-        body: formData,
+        method: "POST",
+        body: JSON.stringify(data),
       });
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Field created successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/v1/admin/templates', selectedTemplate?.id, 'fields'] });
-      setShowCreateField(false);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Failed to create field", description: error.message, variant: "destructive" });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/v1/admin/templates", selectedTemplate?.id, "fields"] 
+      });
+      setFieldDialogOpen(false);
+      fieldForm.reset();
+      setEditingField(null);
+      toast({
+        title: "Field created",
+        description: "Template field created successfully",
+      });
     },
   });
 
   // Update field mutation
   const updateFieldMutation = useMutation({
-    mutationFn: async (data: { id: number; field_name: string; label_ru: string; extraction_rules: string }) => {
-      const formData = new FormData();
-      formData.append('field_name', data.field_name);
-      formData.append('label_ru', data.label_ru);
-      formData.append('extraction_rules', data.extraction_rules);
-
-      return apiRequest(`/api/v1/admin/fields/${data.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: formData,
+    mutationFn: async (data: FieldFormData) => {
+      const response = await apiRequest(`/api/v1/admin/templates/fields/${editingField?.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
       });
+      return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Field updated successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/v1/admin/templates', selectedTemplate?.id, 'fields'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/v1/admin/templates", selectedTemplate?.id, "fields"] 
+      });
+      setFieldDialogOpen(false);
+      fieldForm.reset();
       setEditingField(null);
-    },
-    onError: (error: Error) => {
-      toast({ title: "Failed to update field", description: error.message, variant: "destructive" });
+      toast({
+        title: "Field updated",
+        description: "Template field updated successfully",
+      });
     },
   });
 
   // Delete field mutation
   const deleteFieldMutation = useMutation({
     mutationFn: async (fieldId: number) => {
-      return apiRequest(`/api/v1/admin/fields/${fieldId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+      await apiRequest(`/api/v1/admin/templates/fields/${fieldId}`, {
+        method: "DELETE",
       });
     },
     onSuccess: () => {
-      toast({ title: "Field deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/v1/admin/templates', selectedTemplate?.id, 'fields'] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Failed to delete field", description: error.message, variant: "destructive" });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/v1/admin/templates", selectedTemplate?.id, "fields"] 
+      });
+      toast({
+        title: "Field deleted",
+        description: "Template field deleted successfully",
+      });
     },
   });
 
-  const handleCreateTemplate = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    createTemplateMutation.mutate({
-      name: formData.get('name') as string,
-      is_active: formData.get('is_active') === 'on',
+  // Predefined field templates based on Russian customs declaration
+  const predefinedFields = [
+    {
+      field_name: "declaration_number",
+      label_ru: "Грузовая таможенная декларация №",
+      extraction_rules: { type: "regex", pattern: "ГРУЗОВАЯ ТАМОЖЕННАЯ ДЕКЛАРАЦИЯ\\s+№\\s*([A-Z0-9]+)" }
+    },
+    {
+      field_name: "exporter_company",
+      label_ru: "Экспортер/грузоотп.",
+      extraction_rules: { type: "keyword", keyword: "Экспортер/грузоотп" }
+    },
+    {
+      field_name: "importer_company", 
+      label_ru: "Импортер/грузопол.",
+      extraction_rules: { type: "keyword", keyword: "Импортер/грузопол" }
+    },
+    {
+      field_name: "country_origin",
+      label_ru: "Страна:",
+      extraction_rules: { type: "keyword", keyword: "Страна:" }
+    },
+    {
+      field_name: "declarant_representative",
+      label_ru: "Декларант/представитель",
+      extraction_rules: { type: "keyword", keyword: "Декларант/представитель" }
+    },
+    {
+      field_name: "reference_number",
+      label_ru: "Справочный номер",
+      extraction_rules: { type: "regex", pattern: "Справочный номер[\\s\\n]+([0-9.]+)" }
+    },
+    {
+      field_name: "total_packages",
+      label_ru: "Всего наим. т-ов",
+      extraction_rules: { type: "regex", pattern: "Всего наим\\.\\s*т-ов[\\s\\n]+([0-9]+)" }
+    },
+    {
+      field_name: "packages_count",
+      label_ru: "Кол-во мест",
+      extraction_rules: { type: "regex", pattern: "Кол-во мест[\\s\\n]+([0-9]+)" }
+    },
+    {
+      field_name: "responsible_person",
+      label_ru: "Лицо, ответст. за финан. урегулирование",
+      extraction_rules: { type: "keyword", keyword: "Лицо, ответст. за финан. урегулирование" }
+    },
+    {
+      field_name: "departure_country",
+      label_ru: "Страна отправления",
+      extraction_rules: { type: "keyword", keyword: "Страна отправления" }
+    },
+    {
+      field_name: "destination_country",
+      label_ru: "Страна назначения",
+      extraction_rules: { type: "keyword", keyword: "Страна назначения" }
+    },
+    {
+      field_name: "transport_border",
+      label_ru: "Транспортное средство на границе",
+      extraction_rules: { type: "keyword", keyword: "Транспортное средство на границе" }
+    },
+    {
+      field_name: "customs_cost",
+      label_ru: "Общ. тамож. стоим-ть",
+      extraction_rules: { type: "regex", pattern: "Общ\\. тамож\\. стоим-ть[\\s\\n]+([0-9,]+)" }
+    },
+    {
+      field_name: "currency_rate",
+      label_ru: "Курс валюты",
+      extraction_rules: { type: "regex", pattern: "Курс валюты[\\s\\n]+([0-9,]+)" }
+    },
+    {
+      field_name: "payment_deferral",
+      label_ru: "Отсрочка платежей",
+      extraction_rules: { type: "keyword", keyword: "Отсрочка платежей" }
+    },
+    {
+      field_name: "warehouse_name",
+      label_ru: "Наименование склада",
+      extraction_rules: { type: "keyword", keyword: "Наименование склада" }
+    },
+    {
+      field_name: "customs_location",
+      label_ru: "Таможня и страна назначения",
+      extraction_rules: { type: "keyword", keyword: "Таможня и страна назначения" }
+    },
+    {
+      field_name: "location_date",
+      label_ru: "Место и дата:",
+      extraction_rules: { type: "regex", pattern: "Место и дата:[\\s\\n]+([^\\n]+)" }
+    },
+    {
+      field_name: "gtd_number",
+      label_ru: "№ ГТД:",
+      extraction_rules: { type: "regex", pattern: "№ ГТД:[\\s\\n]+([0-9/]+)" }
+    },
+    {
+      field_name: "contract_date",
+      label_ru: "№ и дата договора:",
+      extraction_rules: { type: "regex", pattern: "№ и дата договора:[\\s\\n]+([^\\n]+)" }
+    }
+  ];
+
+  const addPredefinedFields = async () => {
+    if (!selectedTemplate) return;
+
+    for (const field of predefinedFields) {
+      try {
+        await apiRequest(`/api/v1/admin/templates/${selectedTemplate.id}/fields`, {
+          method: "POST",
+          body: JSON.stringify(field),
+        });
+      } catch (error) {
+        console.error("Error adding field:", field.field_name, error);
+      }
+    }
+
+    queryClient.invalidateQueries({ 
+      queryKey: ["/api/v1/admin/templates", selectedTemplate.id, "fields"] 
+    });
+
+    toast({
+      title: "Fields added",
+      description: "Russian customs declaration fields added successfully",
     });
   };
 
-  const handleCreateField = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    try {
-      const extractionRules = formData.get('extraction_rules') as string;
-      JSON.parse(extractionRules); // Validate JSON
-      
-      createFieldMutation.mutate({
-        field_name: formData.get('field_name') as string,
-        label_ru: formData.get('label_ru') as string,
-        extraction_rules: extractionRules,
-      });
-    } catch (error) {
-      toast({ title: "Invalid JSON in extraction rules", variant: "destructive" });
+  const onSubmitTemplate = (data: TemplateFormData) => {
+    createTemplateMutation.mutate(data);
+  };
+
+  const onSubmitField = (data: FieldFormData) => {
+    if (editingField) {
+      updateFieldMutation.mutate(data);
+    } else {
+      createFieldMutation.mutate(data);
     }
   };
 
-  const handleUpdateField = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingField) return;
-
-    const formData = new FormData(e.currentTarget);
-    
-    try {
-      const extractionRules = formData.get('extraction_rules') as string;
-      JSON.parse(extractionRules); // Validate JSON
-      
-      updateFieldMutation.mutate({
-        id: editingField.id,
-        field_name: formData.get('field_name') as string,
-        label_ru: formData.get('label_ru') as string,
-        extraction_rules: extractionRules,
+  const openFieldDialog = (field?: TemplateField) => {
+    if (field) {
+      setEditingField(field);
+      fieldForm.reset({
+        field_name: field.field_name,
+        label_ru: field.label_ru,
+        extraction_rules: field.extraction_rules,
       });
-    } catch (error) {
-      toast({ title: "Invalid JSON in extraction rules", variant: "destructive" });
+    } else {
+      setEditingField(null);
+      fieldForm.reset();
     }
+    setFieldDialogOpen(true);
   };
-
-  if (templatesLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="h-48 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex items-center gap-4 mb-6">
-        <Settings className="w-8 h-8 text-blue-600" />
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Admin Panel
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage declaration templates and extraction rules
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Templates Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Declaration Templates</CardTitle>
-                <CardDescription>
-                  Manage templates for different customs declaration types
-                </CardDescription>
-              </div>
-              <Dialog open={showCreateTemplate} onOpenChange={setShowCreateTemplate}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Template
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New Template</DialogTitle>
-                    <DialogDescription>
-                      Add a new declaration template for OCR processing
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleCreateTemplate} className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Template Name</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        placeholder="e.g., Uzbekistan Import Declaration 2025"
-                        required
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch id="is_active" name="is_active" />
-                      <Label htmlFor="is_active">Set as active template</Label>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setShowCreateTemplate(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={createTemplateMutation.isPending}>
-                        {createTemplateMutation.isPending ? "Creating..." : "Create Template"}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {templates && templates.length > 0 ? (
-              <div className="space-y-3">
-                {templates.map((template: DeclarationTemplate) => (
-                  <div
-                    key={template.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                      selectedTemplate?.id === template.id
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTemplate(template)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{template.name}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Created {new Date(template.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {template.is_active && (
-                        <Badge variant="default" className="bg-green-500">Active</Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  No Templates Found
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Create your first declaration template to get started.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Template Fields Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>
-                  {selectedTemplate ? `Fields - ${selectedTemplate.name}` : 'Template Fields'}
-                </CardTitle>
-                <CardDescription>
-                  Configure field extraction rules for the selected template
-                </CardDescription>
-              </div>
-              {selectedTemplate && (
-                <Dialog open={showCreateField} onOpenChange={setShowCreateField}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Field
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Admin Panel</h1>
+            <p className="text-muted-foreground">
+              Manage declaration templates and extraction rules
+            </p>
+          </div>
+          
+          <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Template
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Declaration Template</DialogTitle>
+                <DialogDescription>
+                  Create a new template for customs declarations
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...templateForm}>
+                <form onSubmit={templateForm.handleSubmit(onSubmitTemplate)} className="space-y-4">
+                  <FormField
+                    control={templateForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Template Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Russian Customs Declaration 2025" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={templateForm.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Active Template</FormLabel>
+                          <div className="text-sm text-muted-foreground">
+                            Use this template for new declarations
+                          </div>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setTemplateDialogOpen(false)}>
+                      Cancel
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Create New Field</DialogTitle>
-                      <DialogDescription>
-                        Add a new extraction field for {selectedTemplate.name}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateField} className="space-y-4">
-                      <div>
-                        <Label htmlFor="field_name">System Field Name</Label>
-                        <Input
-                          id="field_name"
-                          name="field_name"
-                          placeholder="e.g., sender_name"
-                          required
-                        />
+                    <Button type="submit" disabled={createTemplateMutation.isPending}>
+                      {createTemplateMutation.isPending ? "Creating..." : "Create Template"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Tabs defaultValue="templates" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="fields">Template Fields</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="templates">
+            <Card>
+              <CardHeader>
+                <CardTitle>Declaration Templates</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {templatesLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-16 bg-gray-200 rounded"></div>
                       </div>
-                      <div>
-                        <Label htmlFor="label_ru">Russian Label</Label>
-                        <Input
-                          id="label_ru"
-                          name="label_ru"
-                          placeholder="e.g., Отправитель/Экспортер"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="extraction_rules">Extraction Rules (JSON)</Label>
-                        <Textarea
-                          id="extraction_rules"
-                          name="extraction_rules"
-                          placeholder='{"type": "regex", "pattern": "ИНН\\s(\\d{10})"}'
-                          rows={4}
-                          required
-                        />
-                        <p className="text-sm text-gray-600 mt-1">
-                          Example: {`{"type": "regex", "pattern": "Invoice\\s*#?\\s*(\\w+)"}`}
-                        </p>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={() => setShowCreateField(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={createFieldMutation.isPending}>
-                          {createFieldMutation.isPending ? "Creating..." : "Create Field"}
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!selectedTemplate ? (
-              <div className="text-center py-8">
-                <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  No Template Selected
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Select a template from the left to manage its fields.
-                </p>
-              </div>
-            ) : fieldsLoading ? (
-              <div className="animate-pulse space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 bg-gray-200 rounded"></div>
-                ))}
-              </div>
-            ) : templateFields && templateFields.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Field Name</TableHead>
-                    <TableHead>Russian Label</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {templateFields.map((field: TemplateField) => (
-                    <TableRow key={field.id}>
-                      <TableCell className="font-medium">{field.field_name}</TableCell>
-                      <TableCell>{field.label_ru}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingField(field)}
+                    ))}
+                  </div>
+                ) : templates.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                    <p className="text-sm text-gray-500 mb-4">No templates created yet</p>
+                    <Button onClick={() => setTemplateDialogOpen(true)}>
+                      Create your first template
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {templates.map((template) => (
+                      <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <h3 className="font-medium">{template.name}</h3>
+                            <p className="text-sm text-gray-500">
+                              Created: {new Date(template.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {template.is_active && (
+                            <Badge variant="default">Active</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setSelectedTemplate(template)}
                           >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteFieldMutation.mutate(field.id)}
-                            disabled={deleteFieldMutation.isPending}
-                          >
-                            <Trash2 className="w-3 h-3" />
+                            <Settings className="h-4 w-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  No Fields Configured
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Add extraction fields to configure OCR data processing.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-      {/* Edit Field Dialog */}
-      <Dialog open={!!editingField} onOpenChange={() => setEditingField(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Field</DialogTitle>
-            <DialogDescription>
-              Update the extraction field configuration
-            </DialogDescription>
-          </DialogHeader>
-          {editingField && (
-            <form onSubmit={handleUpdateField} className="space-y-4">
-              <div>
-                <Label htmlFor="edit_field_name">System Field Name</Label>
-                <Input
-                  id="edit_field_name"
-                  name="field_name"
-                  defaultValue={editingField.field_name}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_label_ru">Russian Label</Label>
-                <Input
-                  id="edit_label_ru"
-                  name="label_ru"
-                  defaultValue={editingField.label_ru}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_extraction_rules">Extraction Rules (JSON)</Label>
-                <Textarea
-                  id="edit_extraction_rules"
-                  name="extraction_rules"
-                  defaultValue={JSON.stringify(editingField.extraction_rules, null, 2)}
-                  rows={4}
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setEditingField(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateFieldMutation.isPending}>
-                  {updateFieldMutation.isPending ? "Updating..." : "Update Field"}
-                </Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+          <TabsContent value="fields">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Template Fields</CardTitle>
+                    {selectedTemplate && (
+                      <p className="text-sm text-muted-foreground">
+                        Editing: {selectedTemplate.name}
+                      </p>
+                    )}
+                  </div>
+                  {selectedTemplate && (
+                    <div className="space-x-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={addPredefinedFields}
+                        size="sm"
+                      >
+                        Add Russian Declaration Fields
+                      </Button>
+                      <Dialog open={fieldDialogOpen} onOpenChange={setFieldDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Field
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>
+                              {editingField ? "Edit Field" : "Add Field"}
+                            </DialogTitle>
+                            <DialogDescription>
+                              Configure data extraction rules for this field
+                            </DialogDescription>
+                          </DialogHeader>
+                          <Form {...fieldForm}>
+                            <form onSubmit={fieldForm.handleSubmit(onSubmitField)} className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={fieldForm.control}
+                                  name="field_name"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Field Name (System)</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="e.g. declaration_number" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={fieldForm.control}
+                                  name="label_ru"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Russian Label</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="e.g. Номер декларации" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              <FormField
+                                control={fieldForm.control}
+                                name="extraction_rules.type"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Extraction Type</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select extraction method" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="regex">Regular Expression</SelectItem>
+                                        <SelectItem value="keyword">Keyword Search</SelectItem>
+                                        <SelectItem value="position">Position-based</SelectItem>
+                                        <SelectItem value="line_contains">Line Contains</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={fieldForm.control}
+                                name="extraction_rules.pattern"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Pattern/Keyword</FormLabel>
+                                    <FormControl>
+                                      <Textarea 
+                                        placeholder="e.g. ГРУЗОВАЯ ТАМОЖЕННАЯ ДЕКЛАРАЦИЯ\s+№\s*([A-Z0-9]+)" 
+                                        {...field} 
+                                      />
+                                    </FormControl>
+                                    <div className="text-xs text-muted-foreground">
+                                      For regex: use capturing groups (). For keyword: enter the text to search for.
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="flex justify-end space-x-2">
+                                <Button type="button" variant="outline" onClick={() => setFieldDialogOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button type="submit" disabled={createFieldMutation.isPending || updateFieldMutation.isPending}>
+                                  {editingField ? "Update Field" : "Add Field"}
+                                </Button>
+                              </div>
+                            </form>
+                          </Form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!selectedTemplate ? (
+                  <div className="text-center py-8">
+                    <Settings className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                    <p className="text-sm text-gray-500">Select a template to manage its fields</p>
+                  </div>
+                ) : fieldsLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="h-12 bg-gray-200 rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : templateFields.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                    <p className="text-sm text-gray-500 mb-4">No fields configured for this template</p>
+                    <div className="space-x-2">
+                      <Button onClick={() => openFieldDialog()}>Add Custom Field</Button>
+                      <Button variant="outline" onClick={addPredefinedFields}>
+                        Add Russian Declaration Fields
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {templateFields.map((field) => (
+                      <div key={field.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3">
+                            <div>
+                              <h4 className="font-medium">{field.label_ru}</h4>
+                              <p className="text-sm text-gray-500">{field.field_name}</p>
+                            </div>
+                            <Badge variant="outline">
+                              {field.extraction_rules?.type || 'N/A'}
+                            </Badge>
+                          </div>
+                          {field.extraction_rules?.pattern && (
+                            <p className="text-xs text-gray-400 mt-1 font-mono">
+                              {field.extraction_rules.pattern}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => openFieldDialog(field)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => deleteFieldMutation.mutate(field.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AppLayout>
   );
 }

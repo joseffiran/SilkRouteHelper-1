@@ -9,8 +9,8 @@ import DashboardPage from "@/pages/DashboardPageNew";
 import ShipmentsPage from "@/pages/ShipmentsPage";
 import DocumentsPage from "@/pages/DocumentsPage";
 import ReportsPage from "@/pages/ReportsPage";
-import ShipmentDetailPage from "@/pages/ShipmentDetailPage";
 import AdminPage from "@/pages/AdminPage";
+import ShipmentDetailPage from "@/pages/ShipmentDetailPage";
 import { useAuth } from "@/hooks/useAuth";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
