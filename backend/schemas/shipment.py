@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
+from .document import DocumentResponse
 
 class ShipmentBase(BaseModel):
     name: str
@@ -15,6 +16,7 @@ class ShipmentResponse(ShipmentBase):
     extracted_data: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
+    documents: List[DocumentResponse] = []
     
     class Config:
         from_attributes = True

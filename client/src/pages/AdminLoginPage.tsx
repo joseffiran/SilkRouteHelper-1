@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
         method: "POST",
         body: JSON.stringify(data),
       });
-      return response;
+      return await response.json();
     },
     onSuccess: (data: any) => {
       localStorage.setItem("access_token", data.access_token);
