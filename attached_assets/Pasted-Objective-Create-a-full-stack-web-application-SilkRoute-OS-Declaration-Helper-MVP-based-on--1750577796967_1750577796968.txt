@@ -1,0 +1,173 @@
+Objective: Create a full-stack web application, "SilkRoute OS - Declaration Helper (MVP)," based on the provided Product Requirements Document. The application will enable Small and Medium-sized Enterprises (SMEs) in Tashkent to automate the creation of customs import declarations.
+
+Core Technologies:
+
+Backend: Python with FastAPI
+Frontend: React with Vite and Tailwind CSS
+Database: PostgreSQL
+Background Tasks: Celery with Redis
+AI/OCR: Tesseract (via pytesseract)
+We will build this application in four distinct phases. Please execute each phase sequentially.
+
+Phase 1: Project Scaffolding & Foundational Backend Setup
+Goal: Establish a clean, scalable monorepo structure and build the foundational elements of the backend, including user authentication and database models.
+
+Codebase Structure:
+
+Create the following directory and file structure. This separates concerns and prepares for future microservices or feature expansion.
+
+/silkroute-os/
+|-- backend/
+|   |-- app/
+|   |   |-- __init__.py
+|   |   |-- main.py             # FastAPI app instance
+|   |   |-- core/               # Config, security, db session
+|   |   |   |-- __init__.py
+|   |   |   |-- config.py       # Environment variables
+|   |   |   |-- security.py     # Password hashing, JWT
+|   |   |   |-- db.py           # Database session management
+|   |   |-- api/                # API routers
+|   |   |   |-- __init__.py
+|   |   |   |-- v1/
+|   |   |   |   |-- __init__.py
+|   |   |   |   |-- endpoints/
+|   |   |   |   |   |-- __init__.py
+|   |   |   |   |   |-- auth.py
+|   |   |   |   |   |-- users.py
+|   |   |   |   |   |-- shipments.py
+|   |   |   |   |-- router.py   # Main v1 router
+|   |   |-- db/                 # Database models and migrations
+|   |   |   |-- __init__.py
+|   |   |   |-- base_class.py   # Declarative base
+|   |   |   |-- models/
+|   |   |   |   |-- __init__.py
+|   |   |   |   |-- user.py
+|   |   |   |   |-- shipment.py
+|   |   |   |-- schemas/          # Pydantic schemas
+|   |   |       |-- __init__.py
+|   |   |       |-- user.py
+|   |   |       |-- shipment.py
+|   |   |       |-- token.py
+|   |   |-- services/           # Business logic
+|   |       |-- __init__.py
+|   |       |-- user_service.py
+|   |       |-- shipment_service.py
+|   |-- requirements.txt
+|   |-- alembic.ini
+|   |-- migrations/
+|-- frontend/
+|   |-- src/
+|   |   |-- App.jsx
+|   |   |-- main.jsx
+|   |   |-- index.css           # Tailwind directives
+|   |   |-- components/         # Reusable UI components
+|   |   |   |-- layout/
+|   |   |   |-- common/
+|   |   |-- pages/              # Page-level components
+|   |   |   |-- LoginPage.jsx
+|   |   |   |-- DashboardPage.jsx
+|   |   |   |-- ShipmentDetailPage.jsx
+|   |   |-- services/           # API client (e.g., axios)
+|   |   |   |-- apiClient.js
+|   |   |-- hooks/              # Custom React hooks
+|   |   |-- utils/              # Helper functions
+|   |   |-- store/              # State management (e.g., Zustand)
+|   |-- package.json
+|   |-- vite.config.js
+|   |-- tailwind.config.js
+|   |-- postcss.config.js
+|-- .gitignore
+|-- README.md
+Technical Tasks for Phase 1:
+
+Initialize Backend (/backend):
+Create a requirements.txt file with fastapi, uvicorn, sqlalchemy, psycopg2-binary, pydantic[email], passlib[bcrypt], python-jose[cryptography], and alembic.
+Set up the FastAPI app in app/main.py.
+Implement JWT-based authentication in app/core/security.py. Include functions for password hashing (bcrypt) and creating/decoding access tokens.
+Configure database connectivity in app/core/db.py.
+Define the SQLAlchemy models in app/db/models/:
+user.py: User model with id, email (unique), hashed_password, company_name, is_active.
+shipment.py: Shipment model with id, user_id (ForeignKey to User), name, status (e.g., "processing", "completed"), created_at, updated_at.
+Define the Pydantic schemas in app/db/schemas/:
+user.py: UserCreate, User, UserInDB.
+shipment.py: ShipmentCreate, Shipment.
+token.py: Token, TokenData.
+Create the first API endpoints in app/api/v1/endpoints/:
+auth.py: /login/access-token endpoint for user login.
+users.py: /users/ endpoint for user creation (sign up).
+Initialize Alembic for database migrations.
+Phase 2: Core Backend Logic - Shipments & Document Processing
+Goal: Build the core functionality: creating shipments, uploading documents, and setting up the background task pipeline for OCR.
+
+Technical Tasks for Phase 2:
+
+Shipment API (/backend):
+In app/api/v1/endpoints/shipments.py, create CRUD endpoints for shipments, protected by JWT authentication (Depends(get_current_user)).
+POST /shipments/: Create a new shipment.
+GET /shipments/: List all shipments for the logged-in user.
+GET /shipments/{shipment_id}: Get details of a single shipment.
+POST /shipments/{shipment_id}/documents: An endpoint to handle file uploads.
+File Upload and Storage:
+The POST /shipments/{shipment_id}/documents endpoint should accept multiple file uploads (List[UploadFile]).
+For now, save the uploaded files to a local directory named /uploads/{shipment_id}/.
+Integrate Celery for Background OCR:
+Add celery and redis to requirements.txt.
+Configure Celery to use Redis as the message broker.
+Create a new directory app/workers/ and define a Celery task process_document_ocr(file_path: str) in app/workers/ocr_worker.py.
+When a document is uploaded via the API, instead of processing it directly, trigger the process_document_ocr task. The API should immediately return a 202 Accepted response to the user.
+Implement Basic OCR:
+Add pytesseract to requirements.txt and ensure Tesseract is installed in the environment.
+Inside the process_document_ocr Celery task, use pytesseract.image_to_string() to extract all text from the uploaded image/PDF file.
+For the MVP, simply log the extracted text to the console. We will parse and use this data in the next phase.
+Phase 3: Frontend Development & API Integration
+Goal: Build the user-facing React application, enabling users to log in, view a dashboard of their shipments, and upload documents.
+
+Technical Tasks for Phase 3:
+
+Initialize Frontend (/frontend):
+Set up a new React project using Vite.
+Install and configure Tailwind CSS.
+Install axios for API calls and react-router-dom for routing.
+Install a state management library like zustand for handling global state (user auth status).
+Authentication Flow:
+Create LoginPage.jsx. It should have a form that takes an email and password.
+On submit, call the /api/v1/login/access-token endpoint using your apiClient. Store the received JWT in localStorage and update the global auth state.
+Implement protected routes. If a user is not authenticated, they should be redirected to the /login page.
+Dashboard Page:
+Create DashboardPage.jsx as the main landing page after login.
+On component mount, fetch the user's shipments from the GET /api/v1/shipments/ endpoint.
+Display the shipments in a simple list or table. Each item should link to a ShipmentDetailPage.
+Include a "Create New Shipment" button.
+Shipment Detail and Document Upload:
+Create ShipmentDetailPage.jsx.
+Use a file input component (e.g., react-dropzone) to allow users to select and upload multiple documents (PDF, JPG, PNG).
+On upload, make a POST request to the /api/v1/shipments/{shipment_id}/documents endpoint.
+Display a "Processing..." indicator to the user while the backend handles the files.
+Phase 4: Interactive Declaration & PDF Generation
+Goal: Implement the "magic" of the MVP: automatically populating a declaration form with OCR data, allowing for edits, and generating the final PDF.
+
+Technical Tasks for Phase 4:
+
+Data Extraction Logic (/backend):
+In the process_document_ocr Celery task, instead of just logging the text, implement a rule-based extraction system.
+Use regular expressions to find key data points (e.g., Invoice Number, Sender/Receiver names, total value).
+Store this extracted data as a JSON object in a new field on the Shipment model (e.g., extracted_data: JSONB).
+API for Extracted Data (/backend):
+Create a new endpoint GET /shipments/{shipment_id}/declaration that returns the extracted_data JSON.
+Interactive Preview (/frontend):
+In ShipmentDetailPage.jsx, fetch the data from the new /declaration endpoint.
+Create a new component, InteractiveDeclaration.jsx. This component will render an HTML form that visually mimics the official customs declaration.
+Populate the form fields with the fetched extracted_data.
+Make each field an editable input. When a user modifies a field, update the component's state.
+Include a "Save Changes" button that sends the updated JSON data back to the backend via a PUT request.
+PDF Generation (/backend):
+Add WeasyPrint to requirements.txt.
+Create a new endpoint GET /shipments/{shipment_id}/download-pdf.
+This endpoint will:
+Fetch the final, validated shipment data.
+Create an HTML template of the customs declaration.
+Render the template with the shipment data.
+Use WeasyPrint to convert the rendered HTML into a PDF file.
+Return the PDF to the user as a file download.
+Final Frontend Integration (/frontend):
+On the ShipmentDetailPage.jsx, add a "Download Declaration PDF" button. This button will link to the GET /api/v1/shipments/{shipment_id}/download-pdf endpoint, completing the core user journey.
