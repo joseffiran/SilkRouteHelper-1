@@ -12,27 +12,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Proxy API requests to FastAPI backend
-  app.use("/api", (req, res) => {
-    const backendUrl = `http://localhost:8000${req.originalUrl}`;
-    
-    fetch(backendUrl, {
-      method: req.method,
-      headers: {
+  app.use("/api", async (req, res) => {
+    try {
+      const backendUrl = `http://localhost:8000${req.originalUrl}`;
+      
+      const headers: Record<string, string> = {
         "Content-Type": "application/json",
-        Authorization: req.headers.authorization || "",
-      } as HeadersInit,
-      body: req.method === "GET" ? undefined : JSON.stringify(req.body),
-    })
-      .then(async (response) => {
-        const data = await response.text();
-        res.status(response.status);
-        res.set(Object.fromEntries(response.headers.entries()));
-        res.send(data);
-      })
-      .catch((error) => {
-        console.error("Backend proxy error:", error);
-        res.status(500).json({ error: "Backend service unavailable" });
-      });
+      };
+      
+      if (req.headers.authorization) {
+        headers.Authorization = req.headers.authorization;
+      }
+      
+      const fetchOptions: RequestInit = {
+        method: req.method,
+        headers,
+      };
+      
+      if (req.method !== "GET" && req.body) {
+        fetchOptions.body = JSON.stringify(req.body);
+      }
+      
+      const response = await fetch(backendUrl, fetchOptions);
+      const data = await response.text();
+      
+      res.status(response.status);
+      res.set("Content-Type", response.headers.get("content-type") || "application/json");
+      res.send(data);
+    } catch (error) {
+      console.error("Backend proxy error:", error);
+      res.status(500).json({ error: "Backend service unavailable" });
+    }
   });
 
   const httpServer = createServer(app);

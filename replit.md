@@ -123,6 +123,7 @@ SilkRoute OS is a full-stack web application designed to help companies with shi
 Changelog:
 - June 22, 2025. Initial setup
 - June 22, 2025. Phase 1 Complete: FastAPI backend with JWT authentication, user registration, PostgreSQL database setup, and Alembic migrations
+- June 22, 2025. Fixed frontend-backend connection issues: Resolved CORS problems, improved database connection pooling, and enabled successful account creation through signup form
 ```
 
 ## User Preferences

@@ -25,9 +25,8 @@ export async function apiRequest(
     config.body = JSON.stringify(data);
   }
 
-  const baseUrl = import.meta.env.DEV ? 'http://localhost:8000' : '';
-  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-  const response = await fetch(fullUrl, config);
+  // Use the Express proxy instead of direct backend calls
+  const response = await fetch(url, config);
 
   if (!response.ok) {
     const errorText = await response.text();
