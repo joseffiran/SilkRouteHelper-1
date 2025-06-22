@@ -34,7 +34,12 @@ export default function ShipmentCard({ shipment, onViewDetails, onUploadDocument
         <div className="space-y-1">
           <CardTitle className="text-lg">{shipment.name}</CardTitle>
           <CardDescription>
-            Created {format(new Date((shipment as any).created_at || shipment.createdAt), "MMM dd, yyyy")}
+            Created {(() => {
+              const dateStr = (shipment as any).created_at || shipment.createdAt;
+              if (!dateStr) return "Unknown date";
+              const date = new Date(dateStr);
+              return isNaN(date.getTime()) ? "Invalid date" : format(date, "MMM dd, yyyy");
+            })()}
           </CardDescription>
         </div>
         <Badge variant={getStatusBadgeVariant(shipment.status)}>

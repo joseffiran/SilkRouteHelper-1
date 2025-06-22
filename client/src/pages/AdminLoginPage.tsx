@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
       return response;
     },
     onSuccess: (data: any) => {
-      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("access_token", data.access_token);
       
       // Check if user is actually an admin
       if (!data.is_superuser) {

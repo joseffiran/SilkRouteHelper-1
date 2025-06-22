@@ -195,12 +195,18 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
                             className="hidden"
                             id={`file-upload-${docType.key}`}
                           />
-                          <Label htmlFor={`file-upload-${docType.key}`}>
-                            <Button variant="outline" size="sm" className="cursor-pointer">
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload
-                            </Button>
-                          </Label>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="cursor-pointer"
+                            onClick={() => {
+                              const input = document.getElementById(`file-upload-${docType.key}`) as HTMLInputElement;
+                              input?.click();
+                            }}
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload
+                          </Button>
                         </div>
                       )}
                       {uploadingTypes.has(docType.key) && (
