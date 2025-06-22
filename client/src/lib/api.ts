@@ -6,9 +6,9 @@ export async function apiRequest(
 ): Promise<Response> {
   const token = localStorage.getItem("access_token");
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {
@@ -17,7 +17,7 @@ export async function apiRequest(
 
   const config: RequestInit = {
     method,
-    headers,
+    headers: headers as HeadersInit,
     ...options,
   };
 
@@ -25,7 +25,9 @@ export async function apiRequest(
     config.body = JSON.stringify(data);
   }
 
-  const response = await fetch(url, config);
+  const baseUrl = import.meta.env.DEV ? 'http://localhost:8000' : '';
+  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+  const response = await fetch(fullUrl, config);
 
   if (!response.ok) {
     const errorText = await response.text();

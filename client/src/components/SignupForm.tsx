@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
+import { z } from "zod";
 
 interface SignupFormData extends InsertUser {
   confirmPassword: string;
@@ -16,7 +17,9 @@ interface SignupFormData extends InsertUser {
 
 const signupFormSchema = insertUserSchema.extend({
   confirmPassword: insertUserSchema.shape.password,
-  agreeToTerms: insertUserSchema.shape.password.optional(),
+  agreeToTerms: z.boolean().refine((val: boolean) => val === true, {
+    message: "You must agree to the terms of service",
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
