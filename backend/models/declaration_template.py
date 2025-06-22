@@ -3,17 +3,14 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from core.database import Base
 
-class User(Base):
-    __tablename__ = "users"
+class DeclarationTemplate(Base):
+    __tablename__ = "declaration_templates"
 
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    company_name = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
+    name = Column(String, nullable=False)  # e.g., "Uzbekistan Import Declaration 2025"
+    is_active = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Relationship
-    shipments = relationship("Shipment", back_populates="owner")
+    # Relationships
+    fields = relationship("TemplateField", back_populates="template", cascade="all, delete-orphan")

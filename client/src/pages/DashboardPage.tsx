@@ -1,29 +1,95 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Plus, Package, FileText, Clock, CheckCircle } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Shipment } from "@shared/schema";
+import ShipmentCard from "@/components/ShipmentCard";
+import ShipmentDetails from "@/components/ShipmentDetails";
+import DocumentUpload from "@/components/DocumentUpload";
+
+const createShipmentSchema = z.object({
+  name: z.string().min(1, "Shipment name is required"),
+});
+
+type CreateShipmentData = z.infer<typeof createShipmentSchema>;
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const [uploadingShipment, setUploadingShipment] = useState<Shipment | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const form = useForm<CreateShipmentData>({
+    resolver: zodResolver(createShipmentSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
 
   const { data: shipments = [], isLoading } = useQuery<Shipment[]>({
     queryKey: ["/api/v1/shipments/"],
     enabled: !!user,
   });
 
-  const stats = {
-    total_shipments: shipments.length,
-    processing: shipments.filter(s => s.status === "processing").length,
-    completed: shipments.filter(s => s.status === "completed").length,
-    this_month: shipments.filter(s => {
-      const shipmentDate = new Date(s.createdAt);
-      const now = new Date();
-      return shipmentDate.getMonth() === now.getMonth() && 
-             shipmentDate.getFullYear() === now.getFullYear();
-    }).length,
+  // Create shipment mutation
+  const createShipmentMutation = useMutation({
+    mutationFn: async (data: CreateShipmentData): Promise<Shipment> => {
+      return apiRequest('/api/v1/shipments/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Shipment created",
+        description: "New shipment has been created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/shipments/"] });
+      setCreateDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create shipment",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateShipment = (data: CreateShipmentData) => {
+    createShipmentMutation.mutate(data);
   };
+
+  const handleViewDetails = (shipment: Shipment) => {
+    setSelectedShipment(shipment);
+  };
+
+  const handleUploadDocuments = (shipment: Shipment) => {
+    setUploadingShipment(shipment);
+  };
+
+  // Calculate stats
+  const totalShipments = shipments.length;
+  const processingShipments = shipments.filter((s: Shipment) => s.status === 'processing').length;
+  const completedShipments = shipments.filter((s: Shipment) => s.status === 'completed').length;
+  const totalDocuments = shipments.reduce((acc: number, s: Shipment) => {
+    const extractedData = s.extractedData as any;
+    return acc + (extractedData?.processed_files?.length || 0);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -78,10 +144,51 @@ export default function DashboardPage() {
               </h1>
               <p className="text-gray-600 mt-2">Manage your customs declarations efficiently</p>
             </div>
-            <Button className="bg-primary hover:bg-primary/90">
-              <i className="fas fa-plus mr-2"></i>
-              New Shipment
-            </Button>
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Shipment
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Shipment</DialogTitle>
+                  <DialogDescription>
+                    Create a new shipment to start processing documents and declarations.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleCreateShipment)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Shipment Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter shipment name..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setCreateDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createShipmentMutation.isPending}>
+                        {createShipmentMutation.isPending ? "Creating..." : "Create Shipment"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -92,7 +199,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Shipments</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total_shipments}</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalShipments}</p>
                 </div>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                   <i className="fas fa-shipping-fast text-primary text-xl"></i>

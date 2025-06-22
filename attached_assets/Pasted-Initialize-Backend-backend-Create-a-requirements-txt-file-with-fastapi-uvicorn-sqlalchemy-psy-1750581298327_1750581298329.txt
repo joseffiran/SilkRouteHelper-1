@@ -1,0 +1,39 @@
+Initialize Backend (/backend):
+Create a requirements.txt file with fastapi, uvicorn, sqlalchemy, psycopg2-binary, pydantic[email], passlib[bcrypt], python-jose[cryptography], and alembic.
+Set up the FastAPI app in app/main.py.
+Implement JWT-based authentication in app/core/security.py. Include functions for password hashing (bcrypt) and creating/decoding access tokens.
+Configure database connectivity in app/core/db.py.
+Define the SQLAlchemy models in app/db/models/:
+user.py: User model with id, email (unique), hashed_password, company_name, is_active.
+shipment.py: Shipment model with id, user_id (ForeignKey to User), name, status (e.g., "processing", "completed"), created_at, updated_at.
+Define the Pydantic schemas in app/db/schemas/:
+user.py: UserCreate, User, UserInDB.
+shipment.py: ShipmentCreate, Shipment.
+token.py: Token, TokenData.
+Create the first API endpoints in app/api/v1/endpoints/:
+auth.py: /login/access-token endpoint for user login.
+users.py: /users/ endpoint for user creation (sign up).
+Initialize Alembic for database migrations.
+Phase 2: Core Backend Logic - Shipments & Document Processing
+Goal: Build the core functionality: creating shipments, uploading documents, and setting up the background task pipeline for OCR.
+
+Technical Tasks for Phase 2:
+
+Shipment API (/backend):
+In app/api/v1/endpoints/shipments.py, create CRUD endpoints for shipments, protected by JWT authentication (Depends(get_current_user)).
+POST /shipments/: Create a new shipment.
+GET /shipments/: List all shipments for the logged-in user.
+GET /shipments/{shipment_id}: Get details of a single shipment.
+POST /shipments/{shipment_id}/documents: An endpoint to handle file uploads.
+File Upload and Storage:
+The POST /shipments/{shipment_id}/documents endpoint should accept multiple file uploads (List[UploadFile]).
+For now, save the uploaded files to a local directory named /uploads/{shipment_id}/.
+Integrate Celery for Background OCR:
+Add celery and redis to requirements.txt.
+Configure Celery to use Redis as the message broker.
+Create a new directory app/workers/ and define a Celery task process_document_ocr(file_path: str) in app/workers/ocr_worker.py.
+When a document is uploaded via the API, instead of processing it directly, trigger the process_document_ocr task. The API should immediately return a 202 Accepted response to the user.
+Implement Basic OCR:
+Add pytesseract to requirements.txt and ensure Tesseract is installed in the environment.
+Inside the process_document_ocr Celery task, use pytesseract.image_to_string() to extract all text from the uploaded image/PDF file.
+For the MVP, simply log the extracted text to the console. We will parse and use this data in the next phase.

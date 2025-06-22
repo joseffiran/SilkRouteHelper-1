@@ -14,5 +14,6 @@ class Shipment(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Relationship
+    # Relationships
     owner = relationship("User", back_populates="shipments")
+    documents = relationship("Document", back_populates="shipment", cascade="all, delete-orphan")
