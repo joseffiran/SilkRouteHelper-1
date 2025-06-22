@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -43,14 +43,31 @@ export default function DashboardPage() {
     enabled: !!user,
   });
 
+  // Calculate statistics from shipments data
+  const stats = useMemo(() => {
+    if (!shipments || shipments.length === 0) {
+      return { total: 0, processing: 0, completed: 0, this_month: 0 };
+    }
+
+    const now = new Date();
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    return {
+      total: shipments.length,
+      processing: shipments.filter(s => s.status === 'processing').length,
+      completed: shipments.filter(s => s.status === 'completed').length,
+      this_month: shipments.filter(s => new Date(s.createdAt) >= thisMonth).length
+    };
+  }, [shipments]);
+
   // Create shipment mutation
   const createShipmentMutation = useMutation({
     mutationFn: async (data: CreateShipmentData): Promise<Shipment> => {
-      return apiRequest('/api/v1/shipments/', {
+      const response = await apiRequest('/api/v1/shipments/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+      return response.json();
     },
     onSuccess: () => {
       toast({

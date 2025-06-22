@@ -42,21 +42,19 @@ export default function AdminPage() {
   // Fetch templates
   const { data: templates, isLoading: templatesLoading } = useQuery({
     queryKey: ['/api/v1/admin/templates'],
-    queryFn: () => apiRequest('/api/v1/admin/templates/', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    }),
+    queryFn: async () => {
+      const response = await apiRequest('/api/v1/admin/templates/');
+      return response.json();
+    },
   });
 
   // Fetch fields for selected template
   const { data: templateFields, isLoading: fieldsLoading } = useQuery({
     queryKey: ['/api/v1/admin/templates', selectedTemplate?.id, 'fields'],
-    queryFn: () => apiRequest(`/api/v1/admin/templates/${selectedTemplate?.id}/fields`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    }),
+    queryFn: async () => {
+      const response = await apiRequest(`/api/v1/admin/templates/${selectedTemplate?.id}/fields`);
+      return response.json();
+    },
     enabled: !!selectedTemplate,
   });
 
@@ -67,13 +65,11 @@ export default function AdminPage() {
       formData.append('name', data.name);
       formData.append('is_active', data.is_active.toString());
 
-      return apiRequest('/api/v1/admin/templates/', {
+      const response = await apiRequest('/api/v1/admin/templates/', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
         body: formData,
       });
+      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Template created successfully" });
@@ -93,13 +89,11 @@ export default function AdminPage() {
       formData.append('label_ru', data.label_ru);
       formData.append('extraction_rules', data.extraction_rules);
 
-      return apiRequest(`/api/v1/admin/templates/${selectedTemplate?.id}/fields`, {
+      const response = await apiRequest(`/api/v1/admin/templates/${selectedTemplate?.id}/fields`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
         body: formData,
       });
+      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Field created successfully" });

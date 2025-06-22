@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import type { User, LoginRequest, TokenResponse } from "@shared/schema";
 
 interface AuthUser {
@@ -51,7 +51,18 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginRequest): Promise<TokenResponse> => {
-      const response = await apiRequest("POST", "/api/v1/login/access-token", credentials);
+      const response = await fetch("/api/v1/login/access-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Login failed");
+      }
+      
       return response.json();
     },
     onSuccess: (data) => {
