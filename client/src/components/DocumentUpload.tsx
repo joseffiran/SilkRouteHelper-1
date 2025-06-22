@@ -123,10 +123,8 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
     }
   };
 
-  const handleSubmit = () => {
-    if (selectedFile && selectedDocumentType) {
-      uploadMutation.mutate({ documentType: selectedDocumentType, file: selectedFile });
-    }
+  const handleSubmit = (file: File, documentType: string) => {
+    uploadMutation.mutate({ documentType, file });
   };
 
   return (
@@ -147,34 +145,56 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
           <div className="grid gap-3">
             {REQUIRED_DOCUMENT_TYPES.map((docType) => {
               const status = getDocumentStatus(docType.key);
-              const isSelected = selectedDocumentType === docType.key;
+              const isUploading = uploadMutation.isPending && selectedDocumentType === docType.key;
               
               return (
                 <div
                   key={docType.key}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                    isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 
+                  className={`p-4 rounded-lg border transition-all ${
                     status === 'completed' ? 'border-green-200 bg-green-50 dark:bg-green-950' :
-                    'border-gray-200 hover:border-gray-300'
+                    status === 'processing' ? 'border-blue-200 bg-blue-50 dark:bg-blue-950' :
+                    'border-gray-200'
                   }`}
-                  onClick={() => setSelectedDocumentType(docType.key)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <div className={`w-4 h-4 rounded-full border-2 ${
-                          isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                        }`}>
-                          {isSelected && <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
-                        </div>
                         <div>
                           <h4 className="font-medium">{docType.label}</h4>
                           <p className="text-sm text-gray-600 dark:text-gray-400">{docType.description}</p>
                         </div>
                       </div>
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-4 flex items-center gap-3">
                       {getStatusBadge(status)}
+                      {status === 'missing' && !isUploading && (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleSubmit(file, docType.key);
+                              }
+                            }}
+                            className="hidden"
+                            id={`file-upload-${docType.key}`}
+                          />
+                          <Label htmlFor={`file-upload-${docType.key}`}>
+                            <Button variant="outline" size="sm" className="cursor-pointer">
+                              <Upload className="w-4 h-4 mr-2" />
+                              Upload
+                            </Button>
+                          </Label>
+                        </div>
+                      )}
+                      {isUploading && (
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm text-blue-600">Uploading...</div>
+                          <Progress value={45} className="w-20" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -183,75 +203,14 @@ export default function DocumentUpload({ shipmentId, onUploadComplete, existingD
           </div>
         </div>
 
-        {/* File Upload Area */}
-        {selectedDocumentType && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">
-              Upload {REQUIRED_DOCUMENT_TYPES.find(d => d.key === selectedDocumentType)?.label}
-            </h3>
-            
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragActive
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                  : "border-gray-300 hover:border-gray-400"
-              }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-lg font-medium mb-2">
-                {selectedFile ? selectedFile.name : "Drag and drop your file here"}
-              </p>
-              <p className="text-gray-500 mb-4">
-                or click to browse files
-              </p>
-              <Input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileSelect}
-                className="hidden"
-                id="file-upload"
-              />
-              <Label htmlFor="file-upload">
-                <Button variant="outline" className="cursor-pointer">
-                  Browse Files
-                </Button>
-              </Label>
+        {/* Upload Progress Display */}
+        {uploadMutation.isPending && (
+          <div className="space-y-2 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+            <div className="flex justify-between text-sm">
+              <span>Uploading and processing document...</span>
+              <span>Processing</span>
             </div>
-
-            {selectedFile && (
-              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-8 h-8 text-blue-500" />
-                  <div>
-                    <p className="font-medium">{selectedFile.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={uploadMutation.isPending}
-                  className="ml-4"
-                >
-                  {uploadMutation.isPending ? "Uploading..." : "Upload & Process"}
-                </Button>
-              </div>
-            )}
-
-            {uploadMutation.isPending && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Uploading and starting OCR processing...</span>
-                  <span>Processing</span>
-                </div>
-                <Progress value={45} className="w-full" />
-              </div>
-            )}
+            <Progress value={45} className="w-full" />
           </div>
         )}
       </CardContent>
