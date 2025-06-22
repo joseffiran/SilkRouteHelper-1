@@ -17,12 +17,13 @@ interface SignupFormData extends InsertUser {
 
 const signupFormSchema = insertUserSchema.extend({
   confirmPassword: insertUserSchema.shape.password,
-  agreeToTerms: z.boolean().refine((val: boolean) => val === true, {
-    message: "You must agree to the terms of service",
-  }),
+  agreeToTerms: z.union([z.boolean(), z.string()]).transform((val) => val === true || val === "true"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine((data) => data.agreeToTerms, {
+  message: "You must agree to the terms of service",
+  path: ["agreeToTerms"],
 });
 
 export default function SignupForm() {
@@ -59,8 +60,12 @@ export default function SignupForm() {
   });
 
   const onSubmit = async (data: SignupFormData) => {
-    const { confirmPassword, agreeToTerms, ...userData } = data;
-    await signupMutation.mutateAsync(userData);
+    try {
+      const { confirmPassword, agreeToTerms, ...userData } = data;
+      await signupMutation.mutateAsync(userData);
+    } catch (error) {
+      console.error("Signup error:", error);
+    }
   };
 
   return (
@@ -149,8 +154,13 @@ export default function SignupForm() {
         </div>
 
         <div className="flex items-start space-x-3">
-          <Checkbox {...register("agreeToTerms")} required />
-          <span className="text-sm text-gray-600">
+          <input
+            type="checkbox"
+            {...register("agreeToTerms")}
+            id="agreeToTerms"
+            className="mt-1"
+          />
+          <label htmlFor="agreeToTerms" className="text-sm text-gray-600">
             I agree to the{" "}
             <a href="#" className="text-primary hover:text-primary/80">
               Terms of Service
@@ -159,8 +169,11 @@ export default function SignupForm() {
             <a href="#" className="text-primary hover:text-primary/80">
               Privacy Policy
             </a>
-          </span>
+          </label>
         </div>
+        {errors.agreeToTerms && (
+          <p className="mt-1 text-sm text-red-600">{errors.agreeToTerms.message}</p>
+        )}
 
         <Button
           type="submit"
