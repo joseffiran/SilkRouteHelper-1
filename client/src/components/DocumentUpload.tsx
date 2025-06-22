@@ -4,52 +4,67 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Upload, FileText, AlertCircle, CheckCircle, Package } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
+// Document types as defined in Phase 2 requirements
+const REQUIRED_DOCUMENT_TYPES = [
+  { key: 'invoice', label: 'Invoice', description: 'Commercial invoice for the shipment' },
+  { key: 'packing_list', label: 'Packing List', description: 'Detailed list of package contents' },
+  { key: 'certificate_of_quality', label: 'Certificate of Quality', description: 'Quality assurance certificate' },
+  { key: 'customs_declaration', label: 'Customs Declaration', description: 'Customs declaration form' },
+  { key: 'bill_of_lading', label: 'Bill of Lading', description: 'Shipping document' },
+  { key: 'origin_certificate', label: 'Certificate of Origin', description: 'Product origin certification' }
+];
+
 interface DocumentUploadProps {
   shipmentId: number;
   onUploadComplete?: () => void;
+  existingDocuments?: any[];
 }
 
-interface UploadResponse {
-  message: string;
-  shipment_id: number;
-  files: Array<{
-    original_name: string;
-    saved_path: string;
-    content_type: string;
-    size: number;
-  }>;
-  status: string;
+interface DocumentUploadData {
+  documentType: string;
+  file: File;
 }
 
-export default function DocumentUpload({ shipmentId, onUploadComplete }: DocumentUploadProps) {
-  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+export default function DocumentUpload({ shipmentId, onUploadComplete, existingDocuments = [] }: DocumentUploadProps) {
+  const [selectedDocumentType, setSelectedDocumentType] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
-    mutationFn: async (files: FileList): Promise<UploadResponse> => {
+    mutationFn: async ({ documentType, file }: DocumentUploadData) => {
       const formData = new FormData();
-      Array.from(files).forEach(file => {
-        formData.append('files', file);
-      });
+      formData.append('file', file);
+      formData.append('document_type', documentType);
 
-      return apiRequest(`/api/v1/shipments/${shipmentId}/documents`, {
+      const response = await fetch(`/api/v1/shipments/${shipmentId}/documents`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
         body: formData,
       });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "Upload successful",
-        description: `${data.files.length} files uploaded and processing started`,
+        description: `Document uploaded and processing started`,
       });
-      setSelectedFiles(null);
+      setSelectedFile(null);
+      setSelectedDocumentType(null);
       queryClient.invalidateQueries({ queryKey: ['/api/shipments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/shipments', shipmentId] });
       onUploadComplete?.();
@@ -62,6 +77,25 @@ export default function DocumentUpload({ shipmentId, onUploadComplete }: Documen
       });
     },
   });
+
+  // Check which document types are already uploaded
+  const getDocumentStatus = (documentType: string) => {
+    const existing = existingDocuments.find(doc => doc.document_type === documentType);
+    return existing ? existing.status : 'missing';
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Complete</Badge>;
+      case 'processing':
+        return <Badge variant="secondary"><Package className="w-3 h-3 mr-1" />Processing</Badge>;
+      case 'error':
+        return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Error</Badge>;
+      default:
+        return <Badge variant="outline">Missing</Badge>;
+    }
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -79,118 +113,147 @@ export default function DocumentUpload({ shipmentId, onUploadComplete }: Documen
     setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFiles(e.dataTransfer.files);
+      setSelectedFile(e.dataTransfer.files[0]);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setSelectedFiles(e.target.files);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
     }
   };
 
-  const handleUpload = () => {
-    if (selectedFiles) {
-      uploadMutation.mutate(selectedFiles);
+  const handleSubmit = () => {
+    if (selectedFile && selectedDocumentType) {
+      uploadMutation.mutate({ documentType: selectedDocumentType, file: selectedFile });
     }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Upload className="mr-2 h-5 w-5" />
-          Upload Documents
+        <CardTitle className="flex items-center gap-2">
+          <Upload className="w-5 h-5" />
+          Document Upload
         </CardTitle>
         <CardDescription>
-          Upload shipping documents for OCR processing. Supports images and PDF files.
+          Upload your required customs documents. Each document type will be processed with OCR for data extraction.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            dragActive
-              ? "border-primary bg-primary/5"
-              : "border-muted-foreground/25 hover:border-muted-foreground/50"
-          }`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
-          <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-            <Upload className="h-10 w-10 text-muted-foreground mb-4" />
-            <Label htmlFor="file-upload" className="cursor-pointer">
-              <span className="font-semibold text-primary">Click to upload</span>
-              <span className="text-muted-foreground"> or drag and drop</span>
-            </Label>
-            <p className="text-xs text-muted-foreground mt-2">
-              PNG, JPG, JPEG or PDF (MAX. 10MB)
-            </p>
+      <CardContent className="space-y-6">
+        {/* Document Type Checklist */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Required Documents</h3>
+          <div className="grid gap-3">
+            {REQUIRED_DOCUMENT_TYPES.map((docType) => {
+              const status = getDocumentStatus(docType.key);
+              const isSelected = selectedDocumentType === docType.key;
+              
+              return (
+                <div
+                  key={docType.key}
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 
+                    status === 'completed' ? 'border-green-200 bg-green-50 dark:bg-green-950' :
+                    'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedDocumentType(docType.key)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 ${
+                          isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                        }`}>
+                          {isSelected && <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{docType.label}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{docType.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      {getStatusBadge(status)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <Input
-            id="file-upload"
-            type="file"
-            className="hidden"
-            multiple
-            accept="image/*,application/pdf"
-            onChange={handleFileChange}
-          />
         </div>
 
-        {selectedFiles && selectedFiles.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Selected Files:</Label>
-            {Array.from(selectedFiles).map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-2 bg-muted rounded-lg"
-              >
-                <div className="flex items-center space-x-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm truncate max-w-[200px]">{file.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({formatFileSize(file.size)})
-                  </span>
-                </div>
-                {uploadMutation.isPending ? (
-                  <div className="flex items-center space-x-2">
-                    <Progress value={33} className="w-20" />
-                    <span className="text-xs">Uploading...</span>
+        {/* File Upload Area */}
+        {selectedDocumentType && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">
+              Upload {REQUIRED_DOCUMENT_TYPES.find(d => d.key === selectedDocumentType)?.label}
+            </h3>
+            
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                dragActive
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                  : "border-gray-300 hover:border-gray-400"
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-lg font-medium mb-2">
+                {selectedFile ? selectedFile.name : "Drag and drop your file here"}
+              </p>
+              <p className="text-gray-500 mb-4">
+                or click to browse files
+              </p>
+              <Input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="file-upload"
+              />
+              <Label htmlFor="file-upload">
+                <Button variant="outline" className="cursor-pointer">
+                  Browse Files
+                </Button>
+              </Label>
+            </div>
+
+            {selectedFile && (
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-8 h-8 text-blue-500" />
+                  <div>
+                    <p className="font-medium">{selectedFile.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
                   </div>
-                ) : uploadMutation.isSuccess ? (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                ) : uploadMutation.isError ? (
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                ) : null}
+                </div>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={uploadMutation.isPending}
+                  className="ml-4"
+                >
+                  {uploadMutation.isPending ? "Uploading..." : "Upload & Process"}
+                </Button>
               </div>
-            ))}
+            )}
+
+            {uploadMutation.isPending && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Uploading and starting OCR processing...</span>
+                  <span>Processing</span>
+                </div>
+                <Progress value={45} className="w-full" />
+              </div>
+            )}
           </div>
         )}
-
-        <div className="flex justify-end space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => setSelectedFiles(null)}
-            disabled={!selectedFiles || uploadMutation.isPending}
-          >
-            Clear
-          </Button>
-          <Button
-            onClick={handleUpload}
-            disabled={!selectedFiles || uploadMutation.isPending}
-          >
-            {uploadMutation.isPending ? "Uploading..." : "Upload Documents"}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

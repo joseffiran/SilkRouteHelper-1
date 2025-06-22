@@ -1,0 +1,120 @@
+Of course. We have a solid foundation. Now, let's build the core engine of the application.
+
+This next phase, **Phase 2**, is focused entirely on creating a robust and flexible document management and data extraction pipeline. We will build the user-facing upload functionality and the critical admin panel that ensures long-term adaptability.
+
+Here is the detailed structure and list of technical tasks for the development team.
+
+---
+
+### **Phase 2 Goal: The Intelligent Document Hub**
+
+Our objective is to allow an authenticated user to create a shipment, upload the required customs documents for it, and have the backend automatically process these documents using our adaptable OCR engine. We will also build the admin interface to manage the extraction rules, which is the cornerstone of our platform's flexibility.
+
+### **Key Architectural Enhancements: Database Models**
+
+First, we must extend our database schema to support documents and the dynamic form logic.
+
+**Technical Task (Backend/DBA):**
+
+* **Implement and Migrate New SQLAlchemy Models:**
+    * Modify the `shipment.py` model: Add a relationship to `Document`s.
+    * Create `app/db/models/document.py`:
+        * `id`: Primary Key
+        * `shipment_id`: ForeignKey to `shipments.id`
+        * `document_type`: A string field to store the type (e.g., 'invoice', 'packing_list'). We'll use an Enum for consistency.
+        * `original_filename`: String
+        * `storage_path`: String (path to the file in local storage or S3)
+        * `status`: String Enum ('uploaded', 'processing', 'completed', 'error')
+        * `extracted_data`: `JSONB` type. This will store the key-value pairs from OCR.
+    * Create `app/db/models/declaration_template.py`:
+        * `id`: Primary Key
+        * `name`: String (e.g., "Uzbekistan Import Declaration 2025")
+        * `is_active`: Boolean
+    * Create `app/db/models/template_field.py`:
+        * `id`: Primary Key
+        * `template_id`: ForeignKey to `declaration_templates.id`
+        * `field_name`: String, system name (e.g., "sender_name")
+        * `label_ru`: String, user-facing label in Russian (e.g., "Отправитель/Экспортер")
+        * `extraction_rules`: `JSONB` type. Stores rules, e.g., `{"type": "regex", "pattern": "ИНН\\s(\\d{10})"}`.
+
+---
+
+### **Backend Technical Tasks (FastAPI Team)**
+
+**1. Develop Shipment and Document API Endpoints:**
+* **`POST /api/v1/shipments/`**: Create a new, empty shipment for the currently authenticated user.
+* **`GET /api/v1/shipments/`**: List all shipments for the user to display on their dashboard.
+* **`GET /api/v1/shipments/{shipment_id}`**: Retrieve details for a single shipment, including a list of its associated documents and their statuses.
+* **`POST /api/v1/shipments/{shipment_id}/documents`**: This is the core upload endpoint.
+    * It must accept a file and a `document_type` from the request body.
+    * Save the file to a persistent storage location (e.g., a local `/uploads` directory or an S3 bucket).
+    * Create a new `Document` record in the database with the `shipment_id`, `document_type`, file path, and set `status` to 'uploaded'.
+    * Trigger the background Celery task to process this document, passing the `document_id`.
+    * Immediately return the new document object with its 'uploaded' status.
+
+**2. Enhance the AI/OCR Background Worker:**
+* **Create `app/workers/ocr_worker.py`:**
+* **Define Celery Task `process_document(document_id: int)`:**
+    1.  Set the document's status to 'processing' in the database.
+    2.  Retrieve the document's file from storage.
+    3.  Perform image pre-processing using **OpenCV** (deskew, contrast).
+    4.  Run the pre-processed image through **Tesseract OCR** to get the raw text.
+    5.  **Crucial Logic:**
+        * Fetch the currently active `DeclarationTemplate` from the database.
+        * Fetch all `TemplateField`s associated with that template.
+        * Iterate through each `TemplateField`.
+        * Apply the `extraction_rules` (e.g., the regex pattern) from the field to the raw OCR text.
+        * If a match is found, store the result (e.g., `{"sender_name": "ABC Corp"}`)
+    6.  Update the `Document` record's `extracted_data` JSONB field with all the found key-value pairs.
+    7.  Set the document's status to 'completed' (or 'error' if it fails).
+
+---
+
+### **Frontend Technical Tasks (React Team)**
+
+**1. Develop the Main User Dashboard (`/pages/DashboardPage.jsx`):**
+* On page load, call the `GET /api/v1/shipments/` endpoint.
+* Display a list or grid of the user's shipments. Each shipment should show its name/ID and overall status (e.g., "Awaiting Documents," "Processing," "Ready for Review").
+* Include a prominent "Create New Shipment" button that calls `POST /api/v1/shipments/`.
+* Make each shipment in the list a clickable link that navigates to its unique detail page (e.g., `/shipments/123`).
+
+**2. Create the Shipment Detail & Upload Page (`/pages/ShipmentDetailPage.jsx`):**
+* This page is the primary workspace for a single shipment.
+* Fetch and display the shipment's details using `GET /api/v1/shipments/{shipment_id}`.
+* **Develop a structured `DocumentUploader` component:**
+    * Instead of a generic dropzone, display a clear list of required document types based on a predefined list: `['Invoice', 'Packing List', 'Certificate of Quality', 'etc.']`.
+    * Each item in the list should have its own "Upload" button or dropzone. This provides a clear checklist for the user.
+    * When the user uploads a file for 'Invoice', the `POST` request to the backend must include `document_type: 'invoice'`.
+* **Develop a `DocumentStatusList` component:**
+    * This component will display the documents already uploaded for the shipment.
+    * It must show the `document_type`, `filename`, and `status`.
+    * Use **TanStack Query's `refetchInterval`** to poll the shipment detail endpoint every few seconds. This will automatically update the document status on the screen (from 'processing' to 'completed') without requiring a manual page refresh, creating a seamless user experience.
+
+---
+
+### **Admin Panel Technical Tasks (Full-Stack)**
+
+**Goal:** Create a simple, secure interface for a non-technical administrator to manage the core logic of the platform without writing code.
+
+**1. Create Secure Admin Routes (Backend):**
+* Add a new `is_superuser` boolean field to the `User` model.
+* Create a new API dependency that checks if the authenticated user has `is_superuser = True`.
+* Create a new API router at `/api/v1/admin/` and protect all its endpoints with this new dependency.
+
+**2. Develop Admin API Endpoints (Backend):**
+* Implement full CRUD (Create, Read, Update, Delete) endpoints for `DeclarationTemplate` and `TemplateField` models.
+    * `GET /admin/templates/`, `POST /admin/templates/`
+    * `GET /admin/templates/{template_id}/fields`, `POST /admin/templates/{template_id}/fields`
+    * `PUT /admin/fields/{field_id}`, `DELETE /admin/fields/{field_id}`
+
+**3. Build the Admin Interface (Frontend):**
+* Create a new section in the React app at `/admin`, protected by a route guard that checks the user's `is_superuser` status.
+* **Template Management Page:**
+    * A simple table listing all `DeclarationTemplate`s.
+    * Ability to create a new template and set one as `is_active`.
+* **Field Management Page:**
+    * When an admin clicks on a template, they are taken to a page that lists all of its associated `TemplateField`s.
+    * The admin must be able to **Create a New Field** by providing: Label (Russian), System Name, and Extraction Rules (in a text area as JSON).
+    * The admin must be able to **Edit an Existing Field's** `label` and `extraction_rules`. This is the most important feature for adaptability. If the customs office changes an invoice format, the admin can simply update the regex pattern here and save. The changes will be applied instantly for all future OCR processing without any code deployment.
+
+By completing these tasks, we will have a fully functional document upload and processing pipeline that is not only powerful but also incredibly flexible, setting us up perfectly for the final phase: **The Interactive Declaration Preview.**
