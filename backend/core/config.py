@@ -3,7 +3,7 @@ from typing import Optional
 
 class Settings:
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/silkroute_db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
     
     # JWT
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
