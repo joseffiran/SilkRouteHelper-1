@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { loginSchema, type LoginRequest } from "@shared/schema";
+import { useEffect } from "react";
 
 export default function LoginForm() {
-  const { login, loginLoading, loginError } = useAuth();
+  const { login, loginLoading, loginError, user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -22,21 +23,30 @@ export default function LoginForm() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginRequest) => {
-    try {
-      await login(data);
+  // Handle successful login
+  useEffect(() => {
+    if (user) {
       toast({
         title: "Login successful",
         description: "Welcome back to SilkRoute OS!",
       });
       setLocation("/dashboard");
-    } catch (error) {
+    }
+  }, [user, toast, setLocation]);
+
+  // Handle login errors
+  useEffect(() => {
+    if (loginError) {
       toast({
         title: "Login failed",
-        description: loginError?.message || "Please check your credentials and try again.",
+        description: loginError.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
     }
+  }, [loginError, toast]);
+
+  const onSubmit = (data: LoginRequest) => {
+    login(data);
   };
 
   return (

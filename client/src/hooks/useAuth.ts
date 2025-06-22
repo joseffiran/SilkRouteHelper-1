@@ -60,7 +60,8 @@ export function useAuth() {
       });
       
       if (!response.ok) {
-        throw new Error("Login failed");
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Login failed");
       }
       
       return response.json();
@@ -69,6 +70,10 @@ export function useAuth() {
       localStorage.setItem("access_token", data.access_token);
       setToken(data.access_token);
       queryClient.invalidateQueries({ queryKey: ["/api/v1/me"] });
+    },
+    onError: (error) => {
+      localStorage.removeItem("access_token");
+      setToken(null);
     },
   });
 

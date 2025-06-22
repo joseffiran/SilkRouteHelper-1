@@ -1,0 +1,49 @@
+Based on the provided documents, the user flow for the SilkRoute OS Declaration Helper MVP is designed to be a simple, guided journey for an entrepreneur like "Farkhod" in Tashkent. The goal is to automate the creation of a customs declaration, abstracting away the complexity of the process.
+
+
+
+The core user flow unfolds in the following steps:
+
+Login and Create a Shipment: The user, Farkhod, begins by logging into his secure profile. Once logged in, he starts the process by creating a "New Declaration" for an incoming shipment.
+
+
+
+Upload Documents: Farkhod uploads his key commercial documents for the shipment, such as the Commercial Invoice, Packing List, and transport documents. The system is designed to accept these documents as PDF or image files. This is a core feature of the AI-powered document upload system.
+
+
+Automated Data Extraction: The system uses AI with Optical Character Recognition (OCR) to automatically read the uploaded documents. It extracts key information needed for the declaration, such as the sender, receiver, description of goods, value, and weight. This automated step is designed to reduce the time-consuming manual data entry that slows down the supply chain.
+
+
+
+
+Interactive Preview and Edit: After extraction, the application generates a pre-filled, visual preview of the official customs declaration (ГТД). Farkhod can then review all the fields populated with the extracted data. If he finds an error or needs to add missing information, he can click directly on any field in the preview to edit it. The system may also help him classify goods with a basic HS Code lookup tool.
+
+
+
+
+
+Validation and Confirmation: The system performs final validation checks on the data. After reviewing and making any necessary edits, Farkhod gives his final approval for the declaration.
+
+Download Final Document: Once approved, Farkhod downloads the completed declaration as a locked, non-editable PDF. This document is standardized and ready for him to submit to the official government customs portal himself.
+
+
+
+
+
+
+Sources
+
+
+
+
+
+
+
+
+
+
+
+Canvas
+
+Gemini can make mistakes, so double-check it
+
