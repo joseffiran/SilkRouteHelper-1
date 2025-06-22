@@ -126,6 +126,7 @@ Changelog:
 - June 22, 2025. Fixed frontend-backend connection issues: Resolved CORS problems, improved database connection pooling, and enabled successful account creation through signup form
 - June 22, 2025. Phase 2 Complete: Intelligent Document Hub implementation with structured document upload, OCR processing with template-based field extraction, admin panel for template management, real-time document status polling, and comprehensive database schema for documents, templates, and fields
 - June 22, 2025. Secured Admin Panel: Restricted admin panel access to superuser accounts only, Russian customs declaration template with 36 fields initialized, admin navigation hidden from regular users, authentication-based access control implemented
+- June 22, 2025. Fixed Frontend-Backend API Endpoint Mismatch: Resolved document upload and admin panel connectivity issues by implementing proper Express proxy with multer middleware for file uploads, corrected multipart form data handling, and verified all API endpoints work correctly through frontend
 ```
 
 ## User Preferences
