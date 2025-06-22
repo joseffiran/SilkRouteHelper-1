@@ -63,7 +63,11 @@ async def login_access_token(
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "is_superuser": user.is_superuser
+    }
 
 @router.get("/me")
 async def read_users_me(current_user: User = Depends(get_current_user)):

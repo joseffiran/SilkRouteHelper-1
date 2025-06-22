@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 import path from "path";
 import multer from "multer";
 import FormData from "form-data";
+import fetch from "node-fetch";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Start the FastAPI backend server
@@ -34,7 +35,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.append('document_type', req.body.document_type);
       }
       
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        ...formData.getHeaders(), // Get proper boundary headers from form-data
+      };
+      
       if (req.headers.authorization) {
         headers.Authorization = req.headers.authorization;
       }

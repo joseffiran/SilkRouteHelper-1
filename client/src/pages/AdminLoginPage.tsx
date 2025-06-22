@@ -41,6 +41,20 @@ export default function AdminLoginPage() {
     },
     onSuccess: (data: any) => {
       localStorage.setItem("token", data.access_token);
+      
+      // Check if user is actually an admin
+      if (!data.is_superuser) {
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "You don't have admin privileges. Redirecting to dashboard...",
+        });
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1500);
+        return;
+      }
+      
       toast({
         title: "Admin login successful",
         description: "Redirecting to admin panel...",
