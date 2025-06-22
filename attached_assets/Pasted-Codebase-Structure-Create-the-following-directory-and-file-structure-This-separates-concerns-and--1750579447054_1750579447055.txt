@@ -1,0 +1,84 @@
+Codebase Structure:
+
+Create the following directory and file structure. This separates concerns and prepares for future microservices or feature expansion.
+
+/silkroute-os/
+|-- backend/
+|   |-- app/
+|   |   |-- __init__.py
+|   |   |-- main.py             # FastAPI app instance
+|   |   |-- core/               # Config, security, db session
+|   |   |   |-- __init__.py
+|   |   |   |-- config.py       # Environment variables
+|   |   |   |-- security.py     # Password hashing, JWT
+|   |   |   |-- db.py           # Database session management
+|   |   |-- api/                # API routers
+|   |   |   |-- __init__.py
+|   |   |   |-- v1/
+|   |   |   |   |-- __init__.py
+|   |   |   |   |-- endpoints/
+|   |   |   |   |   |-- __init__.py
+|   |   |   |   |   |-- auth.py
+|   |   |   |   |   |-- users.py
+|   |   |   |   |   |-- shipments.py
+|   |   |   |   |-- router.py   # Main v1 router
+|   |   |-- db/                 # Database models and migrations
+|   |   |   |-- __init__.py
+|   |   |   |-- base_class.py   # Declarative base
+|   |   |   |-- models/
+|   |   |   |   |-- __init__.py
+|   |   |   |   |-- user.py
+|   |   |   |   |-- shipment.py
+|   |   |   |-- schemas/          # Pydantic schemas
+|   |   |       |-- __init__.py
+|   |   |       |-- user.py
+|   |   |       |-- shipment.py
+|   |   |       |-- token.py
+|   |   |-- services/           # Business logic
+|   |       |-- __init__.py
+|   |       |-- user_service.py
+|   |       |-- shipment_service.py
+|   |-- requirements.txt
+|   |-- alembic.ini
+|   |-- migrations/
+|-- frontend/
+|   |-- src/
+|   |   |-- App.jsx
+|   |   |-- main.jsx
+|   |   |-- index.css           # Tailwind directives
+|   |   |-- components/         # Reusable UI components
+|   |   |   |-- layout/
+|   |   |   |-- common/
+|   |   |-- pages/              # Page-level components
+|   |   |   |-- LoginPage.jsx
+|   |   |   |-- DashboardPage.jsx
+|   |   |   |-- ShipmentDetailPage.jsx
+|   |   |-- services/           # API client (e.g., axios)
+|   |   |   |-- apiClient.js
+|   |   |-- hooks/              # Custom React hooks
+|   |   |-- utils/              # Helper functions
+|   |   |-- store/              # State management (e.g., Zustand)
+|   |-- package.json
+|   |-- vite.config.js
+|   |-- tailwind.config.js
+|   |-- postcss.config.js
+|-- .gitignore
+|-- README.md
+Technical Tasks for Phase 1:
+
+Initialize Backend (/backend):
+Create a requirements.txt file with fastapi, uvicorn, sqlalchemy, psycopg2-binary, pydantic[email], passlib[bcrypt], python-jose[cryptography], and alembic.
+Set up the FastAPI app in app/main.py.
+Implement JWT-based authentication in app/core/security.py. Include functions for password hashing (bcrypt) and creating/decoding access tokens.
+Configure database connectivity in app/core/db.py.
+Define the SQLAlchemy models in app/db/models/:
+user.py: User model with id, email (unique), hashed_password, company_name, is_active.
+shipment.py: Shipment model with id, user_id (ForeignKey to User), name, status (e.g., "processing", "completed"), created_at, updated_at.
+Define the Pydantic schemas in app/db/schemas/:
+user.py: UserCreate, User, UserInDB.
+shipment.py: ShipmentCreate, Shipment.
+token.py: Token, TokenData.
+Create the first API endpoints in app/api/v1/endpoints/:
+auth.py: /login/access-token endpoint for user login.
+users.py: /users/ endpoint for user creation (sign up).
+Initialize Alembic for database migrations.
