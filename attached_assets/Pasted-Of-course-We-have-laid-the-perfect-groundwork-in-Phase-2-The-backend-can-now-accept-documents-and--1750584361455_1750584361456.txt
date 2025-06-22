@@ -1,0 +1,138 @@
+Of course. We have laid the perfect groundwork in Phase 2. The backend can now accept documents and use a flexible, admin-configurable system to extract data.
+
+Now, we move to Phase 3: The Interactive Preview & Final Output. This is where the core value proposition becomes visible to the user. We will take the automatically extracted data, present it in an editable preview of the final declaration, and generate the official PDF.
+
+Here are the detailed technical tasks for your team to build Phase 3.
+
+Phase 3 Goal: The Interactive Declaration & PDF Generation
+
+Objective: To provide the user with a pre-filled, editable preview of their customs declaration based on the AI-extracted data. After review and approval, the user can download a final, non-editable PDF, completing the core user journey.
+
+Backend Technical Tasks (FastAPI Team)
+
+The backend's primary role in this phase is to aggregate the extracted data from multiple documents and generate the final PDF on demand.
+
+1. Create the Declaration Data Aggregation Endpoint
+
+This is the most critical new endpoint. It must combine data from all of a shipment's processed documents into a single, unified JSON object for the frontend.
+
+Task: Implement a new endpoint: GET /api/v1/shipments/{shipment_id}/declaration.
+
+Logic:
+
+Retrieve the specified Shipment from the database.
+
+Query for all associated Document records that have a status of 'completed'.
+
+Initialize an empty dictionary, aggregated_data = {}.
+
+Iterate through the completed documents. For each document, merge its extracted_data (JSONB field) into the aggregated_data dictionary.
+
+Crucial: Implement a conflict resolution strategy. For example, if both the Invoice and Packing List have a total_weight field, decide which one is the source of truth (e.g., Packing List data overrides Invoice data for weight).
+
+Return the final aggregated_data dictionary as a JSON response.
+
+2. Implement the "Save Edited Declaration" Logic
+
+After the user edits the data on the frontend, we need a way to store their final, approved version. This must be stored separately from the original AI extraction to preserve the raw OCR results for auditing or future model training.
+
+Task (Database): Add a new field to the Shipment model in shipment.py:
+
+final_data: JSONB (nullable, as it's only filled after user review).
+
+Update the status Enum to include states like 'review_completed' or 'ready_for_download'.
+
+Task (API): Implement a new endpoint: PUT /api/v1/shipments/{shipment_id}/declaration.
+
+Logic:
+
+This endpoint will accept a JSON payload from the frontend containing the entire, user-edited declaration.
+
+Validate the incoming data using a Pydantic model.
+
+Save the validated JSON payload into the final_data field of the corresponding Shipment record.
+
+Update the shipment's status to 'review_completed'.
+
+Return a success message.
+
+3. Build the PDF Generation Endpoint
+
+This endpoint will generate the final, non-editable PDF for the user to download.
+
+Task: Implement a new endpoint: GET /api/v1/shipments/{shipment_id}/download-pdf.
+
+Dependencies: Ensure WeasyPrint is in requirements.txt. Consider Jinja2 for HTML templating.
+
+Logic:
+
+Retrieve the Shipment record.
+
+Fetch the data from the final_data field (this is the user-approved "source of truth").
+
+Create an HTML template file (declaration_template.html) that visually matches the official customs declaration form. Use placeholders like {{ sender_name }}.
+
+Use a templating engine (like Jinja2) to render this HTML, injecting the values from final_data.
+
+Use WeasyPrint to convert the rendered HTML string into a PDF in memory.
+
+Return the PDF to the user as a file download using FastAPI's StreamingResponse, setting the Content-Disposition header to attachment; filename="declaration.pdf".
+
+Frontend Technical Tasks (React Team)
+
+The frontend will build the "star of the show": the interactive form that makes the entire process feel magical to the user.
+
+1. Develop the Interactive Declaration Preview Component
+
+This component is the heart of the user experience.
+
+Task: Create a new component: /components/declaration/InteractiveDeclarationPreview.jsx.
+
+Data Fetching: On the ShipmentDetailPage.jsx, after polling confirms that all documents are 'completed', make a call to the new GET .../declaration endpoint using TanStack Query.
+
+State Management:
+
+Use the fetched data to initialize the state of your form. A library like React Hook Form is highly recommended for handling complex form state, validation, and submission.
+
+const { register, handleSubmit, formState: { errors } } = useForm({ defaultValues: fetchedDeclarationData });
+
+UI/Layout:
+
+Build the component to visually mimic the layout of the official declaration form (using Tailwind CSS for styling).
+
+Each field on the form (e.g., Sender, Invoice #, Item Description) should be a controlled input registered with React Hook Form.
+
+For fields that require specific formats (dates, numbers), add client-side validation rules.
+
+2. Implement the "Save & Confirm" Functionality
+
+This allows the user to submit their reviewed and corrected data.
+
+Task: Add a "Confirm & Save Declaration" button to the InteractiveDeclarationPreview component.
+
+Logic:
+
+This button's onClick handler will trigger the handleSubmit function from React Hook Form.
+
+On successful validation, use a useMutation hook from TanStack Query to send the entire form data in a PUT request to the /api/v1/shipments/{shipment_id}/declaration endpoint.
+
+Provide clear user feedback during the mutation (e.g., disable the button and show a spinner).
+
+On success, display a success message and update the UI to reflect the "confirmed" state (e.g., disable the form fields and show the "Download PDF" button).
+
+3. Add the Final PDF Download Feature
+
+This is the final step in the user journey.
+
+Task: Add a "Download Declaration PDF" button to the ShipmentDetailPage.jsx.
+
+Logic:
+
+This button should only be visible and enabled after the declaration has been successfully saved (i.e., the shipment status is 'review_completed').
+
+The button will be a simple HTML <a> tag:
+<a href={/api/v1/shipments/${shipmentId}/download-pdf} download>Download Declaration PDF</a>
+
+The browser will handle the GET request and the file download automatically thanks to the headers set by the FastAPI backend.
+
+By completing these Phase 3 tasks, your team will have delivered the entire end-to-end user journey defined in the PRD. The application will not only automate a complex process but also empower the user with full control over the final output.

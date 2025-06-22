@@ -16,6 +16,7 @@ import type { Shipment } from "@shared/schema";
 import ShipmentCard from "@/components/ShipmentCard";
 import ShipmentDetails from "@/components/ShipmentDetails";
 import DocumentUpload from "@/components/DocumentUpload";
+import AppLayout from "@/components/AppLayout";
 
 const createShipmentSchema = z.object({
   name: z.string().min(1, "Shipment name is required"),

@@ -5,7 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/LoginPage";
-import DashboardPage from "@/pages/DashboardPage";
+import DashboardPage from "@/pages/DashboardPageNew";
+import ShipmentsPage from "@/pages/ShipmentsPage";
+import DocumentsPage from "@/pages/DocumentsPage";
+import ReportsPage from "@/pages/ReportsPage";
 import ShipmentDetailPage from "@/pages/ShipmentDetailPage";
 import AdminPage from "@/pages/AdminPage";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +39,21 @@ function Router() {
       <Route path="/dashboard">
         <ProtectedRoute>
           <DashboardPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/shipments">
+        <ProtectedRoute>
+          <ShipmentsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/documents">
+        <ProtectedRoute>
+          <DocumentsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/reports">
+        <ProtectedRoute>
+          <ReportsPage />
         </ProtectedRoute>
       </Route>
       <Route path="/shipments/:id">
