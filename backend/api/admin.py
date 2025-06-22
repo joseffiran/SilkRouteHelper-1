@@ -12,13 +12,11 @@ router = APIRouter()
 
 def get_admin_user(current_user: User = Depends(get_current_user)):
     """Dependency to verify user has admin privileges"""
-    # For now, all authenticated users can access admin features
-    # In production, you can enable the superuser check below
-    # if not current_user.is_superuser:
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Access denied. Admin privileges required."
-    #     )
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Admin privileges required."
+        )
     return current_user
 
 # Declaration Template endpoints

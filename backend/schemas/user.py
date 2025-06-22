@@ -17,6 +17,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     company_name: str
     is_active: bool
+    is_superuser: bool
     created_at: datetime
     
     class Config:

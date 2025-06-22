@@ -8,6 +8,7 @@ interface AuthUser {
   email: string;
   companyName: string;
   isActive: boolean;
+  is_superuser: boolean;
   createdAt: string;
 }
 
