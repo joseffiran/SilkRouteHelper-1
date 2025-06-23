@@ -154,6 +154,10 @@ class EnhancedOCRService:
                 if vision_result.get('success', False):
                     text = vision_result['text']
                     
+                    # Ensure detected_language is present
+                    if 'detected_language' not in vision_result:
+                        vision_result['detected_language'] = vision_result.get('language_detected', 'russian')
+                    
                     # Generate declaration if possible
                     if self.declaration_generator and text.strip():
                         try:

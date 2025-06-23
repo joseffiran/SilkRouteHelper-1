@@ -68,7 +68,18 @@ class GoogleVisionOCRService:
             )
             
             if response.status_code != 200:
-                raise Exception(f"Google Vision API error: {response.status_code} - {response.text}")
+                if response.status_code == 403:
+                    # API not enabled yet, return fallback indicator
+                    logger.warning(f"Google Vision API not yet activated: {response.text}")
+                    return {
+                        "text": "",
+                        "confidence": 0.0,
+                        "error": "Google Vision API not activated - using fallback",
+                        "success": False,
+                        "fallback_needed": True
+                    }
+                else:
+                    raise Exception(f"Google Vision API error: {response.status_code} - {response.text}")
             
             result = response.json()
             
