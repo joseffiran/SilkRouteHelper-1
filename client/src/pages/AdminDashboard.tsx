@@ -37,6 +37,8 @@ interface User {
 }
 
 export default function AdminDashboard() {
+  const [location] = useLocation();
+  
   const { data: templates = [] } = useQuery<Template[]>({
     queryKey: ["/api/v1/admin/templates"],
   });
@@ -48,6 +50,51 @@ export default function AdminDashboard() {
   const { data: stats } = useQuery({
     queryKey: ["/api/v1/admin/stats"],
   });
+
+  // Handle template editor routes
+  if (location === '/admin/templates/new') {
+    return (
+      <div className="min-h-screen bg-background">
+        <AdminHeader />
+        <div className="container mx-auto p-6">
+          <TemplateEditor
+            templateName="New Template"
+            fields={[]}
+            onSave={(fields) => {
+              console.log('Saving new template with fields:', fields);
+            }}
+            onFieldUpdate={(field) => {
+              console.log('Field updated:', field);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (location.startsWith('/admin/templates/') && location.endsWith('/edit')) {
+    const templateId = location.split('/')[3];
+    const template = templates.find((t: Template) => t.id === parseInt(templateId));
+    
+    return (
+      <div className="min-h-screen bg-background">
+        <AdminHeader />
+        <div className="container mx-auto p-6">
+          <TemplateEditor
+            templateId={parseInt(templateId)}
+            templateName={template?.name || `Template ${templateId}`}
+            fields={template?.fields || []}
+            onSave={(fields) => {
+              console.log('Saving template', templateId, 'with fields:', fields);
+            }}
+            onFieldUpdate={(field) => {
+              console.log('Field updated:', field);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
