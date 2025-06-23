@@ -1,0 +1,25 @@
+DeclarationTemplateEditor.tsx:140 Uncaught TypeError: Cannot read properties of undefined (reading 'reduce')
+    at DeclarationTemplateEditor (DeclarationTemplateEditor.tsx:140:37)
+DeclarationTemplateEditor	@	DeclarationTemplateEditor.tsx:140
+
+DeclarationTemplateEditor.tsx:140 Uncaught TypeError: Cannot read properties of undefined (reading 'reduce')
+    at DeclarationTemplateEditor (DeclarationTemplateEditor.tsx:140:37)
+chunk-RPCDYKBN.js?v=d8a98ff9:14032 The above error occurred in the <DeclarationTemplateEditor> component:
+
+    at DeclarationTemplateEditor (https://806b340e-66b4-48c5-a0b3-f0b37d6e5e33-00-2vbrmmd50yoit.sisko.replit.dev/src/components/DeclarationTemplateEditor.tsx:106:53)
+    at div
+    at div
+    at AdminDashboard (https://806b340e-66b4-48c5-a0b3-f0b37d6e5e33-00-2vbrmmd50yoit.sisko.replit.dev/src/pages/AdminDashboard.tsx:39:22)
+    at AdminRoute (https://806b340e-66b4-48c5-a0b3-f0b37d6e5e33-00-2vbrmmd50yoit.sisko.replit.dev/src/components/AdminRoute.tsx:22:38)
+    at Route (https://806b340e-66b4-48c5-a0b3-f0b37d6e5e33-00-2vbrmmd50yoit.sisko.replit.…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=d8a98ff9:323:16)
+    at Switch (https://806b340e-66b4-48c5-a0b3-f0b37d6e5e33-00-2vbrmmd50yoit.sisko.replit.…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=d8a98ff9:379:17)
+    at Router
+    at Provider (https://806b340e-66b4-48c5-a0b3-f0b37d6e5e33-00-2vbrmmd50yoit.sisko.replit.…unner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=d8a98ff9:38:15)
+    at TooltipProvider (https://806b340e-66b4-48c5-a0b3-f0b37d6e5e33-00-2vbrmmd50yoit.sisko.replit.…rkspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=d8a98ff9:62:5)
+    at QueryClientProvider (https://806b340e-66b4-48c5-a0b3-f0b37d6e5e33-00-2vbrmmd50yoit.sisko.replit.…rkspace/node_modules/.vite/deps/@tanstack_react-query.js?v=d8a98ff9:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+chunk-RPCDYKBN.js?v=d8a98ff9:19413 Uncaught TypeError: Cannot read properties of undefined (reading 'reduce')
+    at DeclarationTemplateEditor (DeclarationTemplateEditor.tsx:140:37)

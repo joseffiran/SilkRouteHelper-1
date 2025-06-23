@@ -133,12 +133,20 @@ export default function DeclarationTemplateEditor({ templateId, onSave }: Declar
   useEffect(() => {
     if (templateData) {
       setTemplate(templateData);
+    } else if (!templateId) {
+      // Initialize new template
+      setTemplate({
+        id: 0,
+        name: "",
+        is_active: false,
+        fields: []
+      });
     }
-  }, [templateData]);
+  }, [templateData, templateId]);
 
   // Group fields by section
-  const fieldsBySection = template?.fields.reduce((acc, field) => {
-    const section = field.extraction_rules.section || "customs_info";
+  const fieldsBySection = template?.fields?.reduce((acc, field) => {
+    const section = field.extraction_rules?.section || "customs_info";
     if (!acc[section]) acc[section] = [];
     acc[section].push(field);
     return acc;
@@ -349,16 +357,16 @@ export default function DeclarationTemplateEditor({ templateId, onSave }: Declar
                                 <Badge variant="outline" className="text-xs">
                                   {field.field_name}
                                 </Badge>
-                                {field.extraction_rules.required && (
+                                {field.extraction_rules?.required && (
                                   <Badge variant="destructive" className="text-xs">
                                     Обязательное
                                   </Badge>
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
-                                {field.extraction_rules.description}
+                                {field.extraction_rules?.description || "Описание не задано"}
                               </p>
-                              {field.extraction_rules.keywords.length > 0 && (
+                              {field.extraction_rules?.keywords && field.extraction_rules.keywords.length > 0 && (
                                 <div className="flex gap-1 mt-2">
                                   {field.extraction_rules.keywords.map((keyword, i) => (
                                     <Badge key={i} variant="secondary" className="text-xs">
@@ -441,10 +449,16 @@ export default function DeclarationTemplateEditor({ templateId, onSave }: Declar
               <Label htmlFor="field-description">Описание для извлечения</Label>
               <Textarea
                 id="field-description"
-                value={editingField.extraction_rules.description}
+                value={editingField.extraction_rules?.description || ""}
                 onChange={(e) => setEditingField({
                   ...editingField,
-                  extraction_rules: { ...editingField.extraction_rules, description: e.target.value }
+                  extraction_rules: { 
+                    ...editingField.extraction_rules, 
+                    description: e.target.value,
+                    section: editingField.extraction_rules?.section || activeSection,
+                    keywords: editingField.extraction_rules?.keywords || [],
+                    required: editingField.extraction_rules?.required || false
+                  }
                 })}
                 placeholder="Как система должна находить это поле в документе"
               />
@@ -454,12 +468,15 @@ export default function DeclarationTemplateEditor({ templateId, onSave }: Declar
               <Label htmlFor="field-keywords">Ключевые слова (через запятую)</Label>
               <Input
                 id="field-keywords"
-                value={editingField.extraction_rules.keywords.join(", ")}
+                value={editingField.extraction_rules?.keywords?.join(", ") || ""}
                 onChange={(e) => setEditingField({
                   ...editingField,
                   extraction_rules: {
                     ...editingField.extraction_rules,
-                    keywords: e.target.value.split(",").map(k => k.trim()).filter(k => k)
+                    section: editingField.extraction_rules?.section || activeSection,
+                    description: editingField.extraction_rules?.description || "",
+                    keywords: e.target.value.split(",").map(k => k.trim()).filter(k => k),
+                    required: editingField.extraction_rules?.required || false
                   }
                 })}
                 placeholder="отправитель, экспортер, поставщик"
@@ -468,10 +485,16 @@ export default function DeclarationTemplateEditor({ templateId, onSave }: Declar
 
             <div className="flex items-center space-x-2">
               <Switch
-                checked={editingField.extraction_rules.required}
+                checked={editingField.extraction_rules?.required || false}
                 onCheckedChange={(checked) => setEditingField({
                   ...editingField,
-                  extraction_rules: { ...editingField.extraction_rules, required: checked }
+                  extraction_rules: { 
+                    ...editingField.extraction_rules, 
+                    section: editingField.extraction_rules?.section || activeSection,
+                    description: editingField.extraction_rules?.description || "",
+                    keywords: editingField.extraction_rules?.keywords || [],
+                    required: checked 
+                  }
                 })}
               />
               <Label>Обязательное поле</Label>

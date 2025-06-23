@@ -203,18 +203,16 @@ export default function AdminDashboard() {
                         <Badge variant={template.is_active ? "default" : "secondary"}>
                           {template.is_active ? "Active" : "Inactive"}
                         </Badge>
-                        <Link href={`/admin/templates/${template.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </Link>
-                        <Link href={`/admin/templates/${template.id}/edit`}>
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                        </Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            window.location.href = `/admin/templates/${template.id}/edit`;
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View & Edit
+                        </Button>
                         <Button variant="outline" size="sm" className="text-destructive">
                           <Trash2 className="h-4 w-4" />
                         </Button>
