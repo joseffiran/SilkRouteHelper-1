@@ -1,0 +1,49 @@
+1. The Core Concept: The Template
+The heart of your system is the Template. A template is a digital blueprint of the customs declaration form. For each box on the form (like Box 2 "Отправитель", Box 8 "Получатель", Box 33 "Код товара"), the template will store key information:
+Field Name: A human-readable name (e.g., "ImporterName").
+Box Number: The official number from the form (e.g., 8).
+Location (Coordinates): The approximate area on the document where this box is located (e.g., x, y, width, height).
+Keywords: Anchor text to help the system find the right data (e.g., for Box 8, the keyword could be "Получатель/Импортер"). This is more robust than fixed coordinates.
+Data Type: Text, Number, Date, etc.
+You will create a template for the Uzbek customs declaration form, and the admin panel will allow you to edit this template.
+2. The Workflow: From Upload to Filled Form
+Here is the step-by-step process from the user's perspective:
+Upload: The user uploads a scanned document (like the one you provided) as a PDF or image file.
+Processing: The Backend sends the document to the OCR Service.
+OCR & Extraction: The OCR service reads all the text on the document and returns it along with its coordinates on the page.
+Mapping: The Backend's "mapping engine" takes the OCR results and your active Template. It goes through each field in the template and uses the defined keywords and coordinates to find the corresponding text from the OCR output.
+Example: To fill Box 8 (Importer), the system looks for the text "Получатель/Импортер". It then grabs the block of text immediately below or next to it (OOO "GAZ-NEFT-AVTO BENZIN", г.Ташкент..., ИНН: 302637691).
+Display: The extracted data is sent to the Frontend, which displays it in an editable web form that mimics the original document's layout.
+Review & Edit: The user reviews the auto-filled data, corrects any OCR mistakes, and fills in any missing fields.
+Export/Save: The user saves the final, corrected declaration.
+3. The Admin Panel Structure (Your Specific Request)
+The admin panel is crucial for managing the system without needing to change the code. Here’s how it would be structured:
+Main Sections of the Admin Panel:
+Dashboard: An overview of system activity (e.g., number of declarations processed, new users).
+Declarations: A list of all declarations processed by all users. Allows the admin to view or troubleshoot issues.
+User Management: A place to add, edit, or remove users.
+Template Manager: This is the most important part for you.
+The Template Manager/Editor
+This is where you can create and modify the templates that power the OCR extraction. A good UI is key here.
+How it would work:
+Load Template: You select the "Uzbek Customs Declaration" template to edit.
+Visual Editor: The interface shows a background image of the blank declaration form. All the currently defined fields are shown as colored, draggable boxes overlaid on the form.
+Editing a Field:
+You click on a box (e.g., the one for Box 22 "Валюта и общая фактур. стоим.").
+A side panel opens with the properties for that field:
+Field Name: totalInvoiceValue
+Box Number: 22
+Search Keywords: Валюта и общая фактур
+Data Type: Number
+You can update these values. You can also resize or move the box on the visual editor to update its coordinate data.
+Adding a New Field:
+You click an "Add New Field" button.
+You draw a new box on the form image where the new field is located.
+The side panel appears, and you fill in its properties.
+Save: You click "Save Template". The backend updates the template in the database. The next document processed will use these new rules.
+4. Technology Stack (Suggestions for Replit)
+Backend: Python with the Flask or Django framework. Python is excellent for this because of its powerful data processing and machine learning libraries.
+Frontend: React.js. It's great for building the kind of dynamic, interactive user interfaces you need for the form editor and admin panel.
+Database: PostgreSQL. It's a robust, open-source relational database that works well with Python and can be hosted easily.
+OCR Service:
+Easy Option (to start): Google Cloud Vision API
