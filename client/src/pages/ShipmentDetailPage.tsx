@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Package, FileText, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import DocumentUpload from "@/components/DocumentUpload";
+import { DeclarationViewer } from "@/components/DeclarationViewer";
 import { Link } from "wouter";
 import { format } from "date-fns";
 
@@ -194,6 +195,23 @@ export default function ShipmentDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Generated Declarations */}
+      {shipment.documents && shipment.documents.some(doc => doc.status === 'completed' && doc.extracted_data?.declaration) && (
+        <div className="mt-6">
+          <div className="space-y-6">
+            {shipment.documents
+              .filter(doc => doc.status === 'completed' && doc.extracted_data?.declaration)
+              .map((document) => (
+                <DeclarationViewer
+                  key={document.id}
+                  declaration={document.extracted_data.declaration}
+                  documentName={document.original_filename}
+                />
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Extracted Data Preview */}
       {shipment.documents && shipment.documents.some(doc => doc.status === 'completed' && doc.extracted_data) && (

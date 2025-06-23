@@ -128,6 +128,8 @@ Changelog:
 - June 22, 2025. Secured Admin Panel: Restricted admin panel access to superuser accounts only, Russian customs declaration template with 36 fields initialized, admin navigation hidden from regular users, authentication-based access control implemented
 - June 22, 2025. Fixed Frontend-Backend API Endpoint Mismatch: Resolved document upload and admin panel connectivity issues by implementing proper Express proxy with multer middleware for file uploads, corrected multipart form data handling, and verified all API endpoints work correctly through frontend
 - June 22, 2025. UI/UX Fixes Complete: Fixed inactive upload buttons by connecting file picker properly, resolved "Invalid Date" display issues by handling both backend date property formats (created_at/createdAt), verified admin login functionality with joseffiran@gmail.com credentials returning proper superuser authentication
+- June 23, 2025. Enhanced OCR System with Multi-Language Support: Implemented comprehensive OCR processing with Russian, Uzbek, and English language support using Tesseract. Added image preprocessing, confidence scoring, and language detection for improved accuracy on customs documents
+- June 23, 2025. Russian Customs Declaration Template Complete: Created exact format template based on actual declaration document (26010/18.06.2025/0034784), implemented automatic declaration generation from OCR-extracted data, integrated DeclarationViewer component for formatted display with copy/download functionality
 ```
 
 ## User Preferences

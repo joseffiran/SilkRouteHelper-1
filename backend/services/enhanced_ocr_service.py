@@ -7,12 +7,32 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 import cv2
 import numpy as np
 import logging
+import sys
+import os
 from typing import Dict, Any, Optional, Tuple
+
+# Add backend directory to path for imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(backend_dir)
+
+try:
+    from services.declaration_generator import DeclarationGeneratorService
+except ImportError:
+    DeclarationGeneratorService = None
 
 logger = logging.getLogger(__name__)
 
 class EnhancedOCRService:
     def __init__(self):
+        # Initialize declaration generator
+        self.declaration_generator = None
+        if DeclarationGeneratorService:
+            try:
+                self.declaration_generator = DeclarationGeneratorService()
+                logger.info("Declaration generator initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize declaration generator: {e}")
+        
         # Language combinations for different document types
         self.language_configs = {
             'multi': 'rus+uzb+uzb_cyrl+eng',  # Multi-language documents
@@ -135,7 +155,7 @@ class EnhancedOCRService:
             # Detect language from text content
             detected_language = self.detect_document_language(processed_image)
             
-            return {
+            result = {
                 'text': text,
                 'confidence': confidence,
                 'detected_language': detected_language,
@@ -144,6 +164,21 @@ class EnhancedOCRService:
                 'text_length': len(text.strip()),
                 'preprocessing_applied': True
             }
+            
+            # Generate declaration if possible
+            if self.declaration_generator and text.strip():
+                try:
+                    declaration_result = self.declaration_generator.generate_declaration(
+                        {'text': text}, 
+                        template_type='russian_customs'
+                    )
+                    result['declaration'] = declaration_result
+                    logger.info("Generated Russian customs declaration from OCR text")
+                except Exception as e:
+                    logger.warning(f"Failed to generate declaration: {e}")
+                    result['declaration_error'] = str(e)
+            
+            return result
             
         except Exception as e:
             logger.error(f"Enhanced OCR failed: {e}")
