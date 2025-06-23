@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from models.declaration_template import DeclarationTemplate
 from models.template_field import TemplateField
 from services.enhanced_ocr_service import EnhancedOCRService
+from services.reference_data_service import reference_data_service
 
 class DeclarationGenerationService:
     def __init__(self, db: Session):

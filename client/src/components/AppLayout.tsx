@@ -18,6 +18,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: "Dashboard", href: "/dashboard", current: location === "/dashboard" },
     { name: "Shipments", href: "/shipments", current: location === "/shipments" },
     { name: "Documents", href: "/documents", current: location === "/documents" },
+    { name: "Auto-Fill Declaration", href: "/declarations", current: location === "/declarations" },
     { name: "Reports", href: "/reports", current: location === "/reports" },
   ];
 

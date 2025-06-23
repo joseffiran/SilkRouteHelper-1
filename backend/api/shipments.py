@@ -140,12 +140,12 @@ async def upload_documents(
                 # Update document with comprehensive OCR data
                 document.extracted_data = {
                     'ocr_text': extracted_text,
-                    'confidence': ocr_result['confidence'],
-                    'detected_language': ocr_result['detected_language'],
-                    'ocr_method': ocr_result['ocr_method'],
-                    'language_config': ocr_result['language_config'],
-                    'text_length': ocr_result['text_length'],
-                    'preprocessing_applied': ocr_result['preprocessing_applied']
+                    'confidence': ocr_result.get('confidence', 0.5),
+                    'detected_language': ocr_result.get('detected_language', 'russian'),
+                    'ocr_method': ocr_result.get('ocr_method', 'enhanced_ocr'),
+                    'language_config': ocr_result.get('language_config', 'rus+eng'),
+                    'text_length': ocr_result.get('text_length', len(extracted_text)),
+                    'preprocessing_applied': ocr_result.get('preprocessing_applied', True)
                 }
                 document.status = DocumentStatus.COMPLETED
                 db.commit()
