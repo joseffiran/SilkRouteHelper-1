@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AdminHeader } from "@/components/AdminHeader";
-import { TemplateEditor } from "@/components/TemplateEditor";
+import DeclarationTemplateEditor from "@/components/DeclarationTemplateEditor";
 import { Badge } from "@/components/ui/badge";
 import { 
   FileText, 
@@ -38,6 +40,8 @@ interface User {
 
 export default function AdminDashboard() {
   const [location] = useLocation();
+  const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
+  const [showNewTemplateDialog, setShowNewTemplateDialog] = useState(false);
   
   const { data: templates = [] } = useQuery<Template[]>({
     queryKey: ["/api/v1/admin/templates"],
@@ -57,14 +61,11 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-background">
         <AdminHeader />
         <div className="container mx-auto p-6">
-          <TemplateEditor
-            templateName="New Template"
-            fields={[]}
-            onSave={(fields) => {
-              console.log('Saving new template with fields:', fields);
-            }}
-            onFieldUpdate={(field) => {
-              console.log('Field updated:', field);
+          <DeclarationTemplateEditor
+            onSave={() => {
+              setShowNewTemplateDialog(false);
+              // Navigate back to templates list
+              window.history.pushState({}, '', '/admin');
             }}
           />
         </div>
@@ -73,22 +74,18 @@ export default function AdminDashboard() {
   }
 
   if (location.startsWith('/admin/templates/') && location.endsWith('/edit')) {
-    const templateId = location.split('/')[3];
-    const template = templates.find((t: Template) => t.id === parseInt(templateId));
+    const templateId = parseInt(location.split('/')[3]);
     
     return (
       <div className="min-h-screen bg-background">
         <AdminHeader />
         <div className="container mx-auto p-6">
-          <TemplateEditor
-            templateId={parseInt(templateId)}
-            templateName={template?.name || `Template ${templateId}`}
-            fields={template?.fields || []}
-            onSave={(fields) => {
-              console.log('Saving template', templateId, 'with fields:', fields);
-            }}
-            onFieldUpdate={(field) => {
-              console.log('Field updated:', field);
+          <DeclarationTemplateEditor
+            templateId={templateId}
+            onSave={() => {
+              setEditingTemplateId(null);
+              // Navigate back to templates list
+              window.history.pushState({}, '', '/admin');
             }}
           />
         </div>

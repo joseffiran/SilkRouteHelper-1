@@ -1,11 +1,14 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from core.database import get_db
 from models.user import User
 from models.declaration_template import DeclarationTemplate
 from models.template_field import TemplateField
+from models.shipment import Shipment
+from models.document import Document
 from api.auth import get_current_user
 from core.security import get_password_hash
 
@@ -20,6 +23,49 @@ def get_admin_user(current_user: User = Depends(get_current_user)):
         )
     return current_user
 
+# Admin Stats endpoint
+@router.get("/stats")
+async def get_admin_stats(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
+    """Get admin dashboard statistics"""
+    
+    # Get user statistics
+    total_users = db.query(func.count(User.id)).scalar()
+    active_users = db.query(func.count(User.id)).filter(User.is_active == True).scalar()
+    
+    # Get shipment statistics
+    total_shipments = db.query(func.count(Shipment.id)).scalar()
+    completed_shipments = db.query(func.count(Shipment.id)).filter(Shipment.status == "completed").scalar()
+    
+    # Get document statistics
+    total_documents = db.query(func.count(Document.id)).scalar()
+    processed_documents = db.query(func.count(Document.id)).filter(Document.status == "completed").scalar()
+    
+    # Get template statistics
+    total_templates = db.query(func.count(DeclarationTemplate.id)).scalar()
+    active_templates = db.query(func.count(DeclarationTemplate.id)).filter(DeclarationTemplate.is_active == True).scalar()
+    
+    return {
+        "users": {
+            "total": total_users or 0,
+            "active": active_users or 0
+        },
+        "shipments": {
+            "total": total_shipments or 0,
+            "completed": completed_shipments or 0
+        },
+        "documents": {
+            "total": total_documents or 0,
+            "processed": processed_documents or 0
+        },
+        "templates": {
+            "total": total_templates or 0,
+            "active": active_templates or 0
+        }
+    }
+
 # Declaration Template endpoints
 @router.get("/templates/")
 async def list_templates(
@@ -29,6 +75,39 @@ async def list_templates(
     """List all declaration templates"""
     templates = db.query(DeclarationTemplate).all()
     return templates
+
+@router.get("/templates/{template_id}")
+async def get_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
+    """Get a specific template with its fields"""
+    template = db.query(DeclarationTemplate).filter(DeclarationTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    # Get template fields
+    fields = db.query(TemplateField).filter(TemplateField.template_id == template_id).all()
+    
+    return {
+        "id": template.id,
+        "name": template.name,
+        "is_active": template.is_active,
+        "created_at": template.created_at,
+        "updated_at": template.updated_at,
+        "fields": [
+            {
+                "id": field.id,
+                "field_name": field.field_name,
+                "label_ru": field.label_ru,
+                "extraction_rules": field.extraction_rules,
+                "created_at": field.created_at,
+                "updated_at": field.updated_at
+            }
+            for field in fields
+        ]
+    }
 
 @router.post("/templates/")
 async def create_template(
