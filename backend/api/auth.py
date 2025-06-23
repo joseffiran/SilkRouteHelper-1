@@ -76,5 +76,6 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
         "email": current_user.email,
         "company_name": current_user.company_name,
         "is_active": current_user.is_active,
+        "is_superuser": current_user.is_superuser,
         "created_at": current_user.created_at
     }
