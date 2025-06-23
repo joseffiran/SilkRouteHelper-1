@@ -21,6 +21,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { name: "Reports", href: "/reports", current: location === "/reports" },
   ];
 
+  // Add admin navigation for superusers
+  const adminNavigation = user?.is_superuser ? [
+    { name: "Admin Panel", href: "/admin", current: location.startsWith("/admin") },
+  ] : [];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Header */}
@@ -43,7 +48,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
               {/* Navigation Links */}
               <nav className="hidden md:flex space-x-6">
-                {navigation.map((item) => (
+                {[...navigation, ...adminNavigation].map((item) => (
                   <Link key={item.name} href={item.href}>
                     <Button
                       variant={item.current ? "default" : "ghost"}
@@ -51,7 +56,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         item.current
                           ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
                           : "text-gray-600 hover:text-gray-900"
-                      }`}
+                      } ${item.name === "Admin Panel" ? "bg-red-50 text-red-700 hover:bg-red-100" : ""}`}
                     >
                       {item.name}
                     </Button>
@@ -99,6 +104,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
+                  {user?.is_superuser && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <Link href="/admin">
+                        <DropdownMenuItem className="text-red-600 font-medium">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Admin Panel</span>
+                        </DropdownMenuItem>
+                      </Link>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
