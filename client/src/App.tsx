@@ -14,6 +14,7 @@ import DocumentsPage from "@/pages/DocumentsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import AdminPage from "@/pages/AdminPage";
 import ShipmentDetailPage from "@/pages/ShipmentDetailPage";
+import DeclarationPage from "@/pages/DeclarationPage";
 import { useAuth } from "@/hooks/useAuth";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -57,6 +58,11 @@ function Router() {
       <Route path="/reports">
         <ProtectedRoute>
           <ReportsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/declarations">
+        <ProtectedRoute>
+          <DeclarationPage />
         </ProtectedRoute>
       </Route>
       <Route path="/shipments/:id">

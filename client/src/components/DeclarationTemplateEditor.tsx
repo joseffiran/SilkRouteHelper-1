@@ -236,7 +236,7 @@ export default function DeclarationTemplateEditor({ templateId, onSave }: Declar
 
     setTemplate({
       ...template,
-      fields: [...template.fields, ...newFields]
+      fields: [...(template.fields || []), ...newFields]
     });
 
     toast({
