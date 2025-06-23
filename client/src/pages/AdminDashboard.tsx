@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminHeader } from "@/components/AdminHeader";
+import { TemplateEditor } from "@/components/TemplateEditor";
 import { Badge } from "@/components/ui/badge";
 import { 
   FileText, 
@@ -15,7 +16,7 @@ import {
   Plus,
   Trash2
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 interface Template {
   id: number;

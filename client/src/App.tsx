@@ -70,6 +70,16 @@ function Router() {
           <AdminDashboard />
         </AdminRoute>
       </Route>
+      <Route path="/admin/templates/:id/edit">
+        <AdminRoute>
+          <AdminDashboard />
+        </AdminRoute>
+      </Route>
+      <Route path="/admin/templates/new">
+        <AdminRoute>
+          <AdminDashboard />
+        </AdminRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

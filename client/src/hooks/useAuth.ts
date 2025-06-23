@@ -82,6 +82,8 @@ export function useAuth() {
     localStorage.removeItem("access_token");
     setToken(null);
     queryClient.clear();
+    // Force page reload to clear all state
+    window.location.href = "/";
   };
 
   useEffect(() => {
