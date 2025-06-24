@@ -205,7 +205,7 @@ class EnhancedOCRService:
                 'text': text,
                 'confidence': confidence,
                 'detected_language': detected_language,
-                'ocr_method': 'tesseract_fallback',
+                'method': 'tesseract_fallback',
                 'language_config': lang_config,
                 'text_length': len(text.strip()),
                 'preprocessing_applied': True,
@@ -237,7 +237,7 @@ class EnhancedOCRService:
                     'text': basic_text,
                     'confidence': 0.3,
                     'detected_language': 'russian',
-                    'ocr_method': 'basic_fallback',
+                    'method': 'basic_fallback',
                     'language_config': 'rus+eng',
                     'error': str(e),
                     'text_length': len(basic_text.strip()),
@@ -269,7 +269,7 @@ class EnhancedOCRService:
         except Exception:
             return 0.5  # Default confidence
 
-    def process_document(self, image_path: str, document_type: str = 'invoice') -> Dict[str, Any]:
+    async def process_document(self, image_path: str, document_type: str = 'invoice') -> Dict[str, Any]:
         """
         Process a document image and extract text with enhanced accuracy
         """

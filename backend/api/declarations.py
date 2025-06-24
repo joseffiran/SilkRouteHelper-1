@@ -56,10 +56,10 @@ async def generate_declaration_from_document(
         ocr_text = extracted_data.get("text", "")
         
         # If no text available, re-process the document
-        if not ocr_text and document.file_path:
+        if not ocr_text and document.storage_path:
             try:
                 ocr_service = EnhancedOCRService()
-                ocr_result = await ocr_service.process_document(document.file_path)
+                ocr_result = await ocr_service.process_document(document.storage_path)
                 ocr_text = ocr_result.get("text", "")
                 
                 # Update document with OCR result
@@ -148,7 +148,7 @@ async def preview_empty_declaration(
 
 @router.post("/test-ocr")
 async def test_ocr_extraction(
-    document_id: int,
+    request: Dict[str, int],
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -169,7 +169,7 @@ async def test_ocr_extraction(
     try:
         # Process document with OCR
         ocr_service = EnhancedOCRService()
-        ocr_result = await ocr_service.process_document(document.file_path)
+        ocr_result = await ocr_service.process_document(document.storage_path)
         
         # Update document with OCR result
         document.extracted_data = json.dumps(ocr_result)
