@@ -201,7 +201,7 @@ class EnhancedOCRService:
             # Detect language from text content
             detected_language = self.detect_document_language(processed_image)
             
-            result = {
+            return {
                 'text': text,
                 'confidence': confidence,
                 'detected_language': detected_language,
@@ -287,16 +287,27 @@ class EnhancedOCRService:
                 
                 logger.info(
                     f"OCR completed for {image_path}: "
-                    f"method={result['ocr_method']}, "
-                    f"confidence={result['confidence']:.2f}, "
-                    f"length={result['text_length']}"
+                    f"method={result.get('method', 'unknown')}, "
+                    f"confidence={result.get('confidence', 0):.2f}, "
+                    f"length={result.get('text_length', 0)}"
                 )
                 
                 return result
                 
         except Exception as e:
             logger.error(f"Document processing failed for {image_path}: {e}")
-            raise Exception(f"Failed to process document: {e}")
+            # Return a safe fallback result
+            return {
+                'text': '',
+                'confidence': 0.0,
+                'detected_language': 'unknown',
+                'method': 'error_fallback',
+                'text_length': 0,
+                'preprocessing_applied': False,
+                'api_provider': 'none',
+                'success': False,
+                'error': str(e)
+            }
 
 # Global instance
 enhanced_ocr = EnhancedOCRService()
