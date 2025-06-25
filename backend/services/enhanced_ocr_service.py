@@ -274,6 +274,25 @@ class EnhancedOCRService:
         Process a document image and extract text with enhanced accuracy
         """
         try:
+            # Check if file exists and is readable
+            if not os.path.exists(image_path):
+                raise FileNotFoundError(f"Image file not found: {image_path}")
+            
+            # Handle PDF files differently
+            if image_path.lower().endswith('.pdf'):
+                logger.warning(f"PDF file detected: {image_path}. PDF processing not implemented.")
+                return {
+                    'text': '',
+                    'confidence': 0.0,
+                    'detected_language': 'unknown',
+                    'method': 'pdf_not_supported',
+                    'text_length': 0,
+                    'preprocessing_applied': False,
+                    'api_provider': 'none',
+                    'success': False,
+                    'error': 'PDF files are not supported for OCR processing'
+                }
+            
             with Image.open(image_path) as image:
                 result = self.extract_text_with_confidence(
                     image=image,

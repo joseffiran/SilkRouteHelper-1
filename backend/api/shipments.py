@@ -130,7 +130,7 @@ async def upload_documents(
                 db.commit()
                 
                 # Use enhanced OCR with multi-language support and preprocessing
-                ocr_result = enhanced_ocr.process_document(
+                ocr_result = await enhanced_ocr.process_document(
                     image_path=file_path,
                     document_type='invoice'  # Default document type for customs
                 )

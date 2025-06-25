@@ -148,7 +148,7 @@ async def preview_empty_declaration(
 
 @router.post("/test-ocr")
 async def test_ocr_extraction(
-    request: Dict[str, int],
+    request: Dict[str, Any],
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
