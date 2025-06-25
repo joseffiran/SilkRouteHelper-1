@@ -278,20 +278,49 @@ class EnhancedOCRService:
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f"Image file not found: {image_path}")
             
-            # Handle PDF files differently
+            # Handle PDF files by converting to images
             if image_path.lower().endswith('.pdf'):
-                logger.warning(f"PDF file detected: {image_path}. PDF processing not implemented.")
-                return {
-                    'text': '',
-                    'confidence': 0.0,
-                    'detected_language': 'unknown',
-                    'method': 'pdf_not_supported',
-                    'text_length': 0,
-                    'preprocessing_applied': False,
-                    'api_provider': 'none',
-                    'success': False,
-                    'error': 'PDF files are not supported for OCR processing'
-                }
+                logger.info(f"PDF file detected: {image_path}. Converting to images for OCR.")
+                try:
+                    from services.pdf_processor import pdf_processor
+                    
+                    # Convert PDF to images
+                    image_paths = pdf_processor.convert_pdf_to_images(image_path)
+                    
+                    if not image_paths:
+                        raise Exception("No images generated from PDF")
+                    
+                    # Process first page (can be extended to process all pages)
+                    first_page_path = image_paths[0]
+                    logger.info(f"Processing first page of PDF: {first_page_path}")
+                    
+                    # Recursively call this method with the image
+                    result = await self.process_document(first_page_path, document_type)
+                    
+                    # Update result to indicate PDF processing
+                    result['method'] = 'pdf_converted_' + result.get('method', 'unknown')
+                    result['original_format'] = 'pdf'
+                    result['pages_processed'] = 1
+                    result['total_pages'] = len(image_paths)
+                    
+                    # Cleanup temporary files
+                    pdf_processor.cleanup_temp_files(image_paths)
+                    
+                    return result
+                    
+                except Exception as pdf_error:
+                    logger.error(f"PDF processing failed: {pdf_error}")
+                    return {
+                        'text': '',
+                        'confidence': 0.0,
+                        'detected_language': 'unknown',
+                        'method': 'pdf_processing_failed',
+                        'text_length': 0,
+                        'preprocessing_applied': False,
+                        'api_provider': 'none',
+                        'success': False,
+                        'error': f'PDF processing failed: {str(pdf_error)}'
+                    }
             
             with Image.open(image_path) as image:
                 result = self.extract_text_with_confidence(

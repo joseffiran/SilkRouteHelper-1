@@ -65,7 +65,7 @@ async def upload_documents(
         Shipment.user_id == current_user.id
     ).first()
     if shipment is None:
-        raise HTTPException(status_code=404, detail="Shipment not found")
+        raise NotFoundError("Shipment", str(shipment_id))
     
     # Create upload directory for this shipment
     upload_dir = f"uploads/{shipment_id}"
@@ -121,34 +121,13 @@ async def upload_documents(
                 "document_id": document.id
             })
             
-            # Process with enhanced OCR service
+            # Process with async OCR service
             try:
-                from services.enhanced_ocr_service import enhanced_ocr
-                
-                # Update document status to processing
-                document.status = DocumentStatus.PROCESSING
-                db.commit()
-                
-                # Use enhanced OCR with multi-language support and preprocessing
-                ocr_result = await enhanced_ocr.process_document(
-                    image_path=file_path,
-                    document_type='invoice'  # Default document type for customs
+                # Use async OCR service for non-blocking processing
+                processing_result = await async_ocr_service.process_document_async(
+                    document_id=document.id,
+                    force_background=False  # Let service decide based on file size
                 )
-                
-                extracted_text = ocr_result['text']
-                
-                # Update document with comprehensive OCR data
-                document.extracted_data = {
-                    'ocr_text': extracted_text,
-                    'confidence': ocr_result.get('confidence', 0.5),
-                    'detected_language': ocr_result.get('detected_language', 'russian'),
-                    'method': ocr_result.get('method', 'enhanced_ocr'),
-                    'language_config': ocr_result.get('language_config', 'rus+eng'),
-                    'text_length': ocr_result.get('text_length', len(extracted_text)),
-                    'preprocessing_applied': ocr_result.get('preprocessing_applied', True)
-                }
-                document.status = DocumentStatus.COMPLETED
-                db.commit()
                 
                 # Update shipment with extracted data
                 current_data = shipment.extracted_data if shipment.extracted_data else {}

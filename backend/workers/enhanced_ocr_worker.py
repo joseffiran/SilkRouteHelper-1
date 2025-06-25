@@ -1,160 +1,160 @@
-import re
+"""
+Enhanced OCR Worker for background processing
+Celery worker that handles OCR processing asynchronously
+"""
+
+import logging
+import sys
 import os
-from celery import Celery
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-from PIL import Image
-import pytesseract
+from typing import Dict, Any
 
-from core.config import settings
+# Add backend directory to path for imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(backend_dir)
+
+from workers.celery_app import celery_app
+from services.enhanced_ocr_service import EnhancedOCRService
+from core.database import get_db
 from models.document import Document, DocumentStatus
-from models.declaration_template import DeclarationTemplate
-from models.template_field import TemplateField
+from datetime import datetime
 
-# Celery configuration
-celery_app = Celery('enhanced_ocr_worker')
-celery_app.conf.broker_url = "redis://localhost:6379/0"
-celery_app.conf.result_backend = "redis://localhost:6379/0"
+logger = logging.getLogger(__name__)
 
-# Database setup
-engine = create_engine(settings.DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-@celery_app.task(bind=True)
-def process_document_with_template(self, document_id: int):
+@celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
+def process_document_background(self, document_id: int, document_path: str, document_type: str) -> Dict[str, Any]:
     """
-    Enhanced OCR processing with template-based field extraction.
+    Background task for processing documents with OCR
     
-    Process Steps:
-    1. Set document status to 'processing'
-    2. Load document file and perform OCR
-    3. Fetch active declaration template and its fields
-    4. Apply extraction rules to extract structured data
-    5. Update document with extracted data and set status to 'completed'
+    Args:
+        document_id: Database ID of the document
+        document_path: File path to the document
+        document_type: Type of document (invoice, bill_of_lading, etc.)
+    
+    Returns:
+        Dict containing OCR results and processing metadata
     """
-    db = SessionLocal()
+    
+    logger.info(f"Starting background OCR processing for document {document_id}")
     
     try:
-        # Get document
-        document = db.query(Document).filter(Document.id == document_id).first()
-        if not document:
-            raise Exception(f"Document {document_id} not found")
+        # Initialize OCR service
+        ocr_service = EnhancedOCRService()
         
-        # Set status to processing
+        # Update document status in database
+        db = next(get_db())
+        document = db.query(Document).filter(Document.id == document_id).first()
+        
+        if not document:
+            raise Exception(f"Document {document_id} not found in database")
+        
+        # Update status to processing
         document.status = DocumentStatus.PROCESSING
+        document.extracted_data = {
+            "status": "processing",
+            "started_at": datetime.utcnow().isoformat(),
+            "worker_id": self.request.id,
+            "retry_count": self.request.retries
+        }
         db.commit()
         
-        # Perform OCR
-        if not os.path.exists(document.storage_path):
-            raise Exception(f"File not found: {document.storage_path}")
+        # Process document with OCR
+        logger.info(f"Running OCR on {document_path}")
+        import asyncio
+        ocr_result = asyncio.run(ocr_service.process_document(document_path, document_type))
         
-        with Image.open(document.storage_path) as image:
-            # Extract raw text using OCR
-            raw_text = pytesseract.image_to_string(image, lang='eng+rus')
-        
-        if not raw_text.strip():
-            raise Exception("No text could be extracted from the document")
-        
-        # Get active declaration template
-        active_template = db.query(DeclarationTemplate).filter(
-            DeclarationTemplate.is_active == True
-        ).first()
-        
-        extracted_data = {
-            "raw_text": raw_text,
-            "document_type": document.document_type.value,
-            "extraction_timestamp": str(document.updated_at),
-            "extracted_fields": {}
+        # Add processing metadata
+        processing_metadata = {
+            "processed_at": datetime.utcnow().isoformat(),
+            "worker_id": self.request.id,
+            "processing_time_seconds": None,  # Could add timing
+            "retry_count": self.request.retries
         }
         
-        if active_template:
-            # Get template fields for structured extraction
-            template_fields = db.query(TemplateField).filter(
-                TemplateField.template_id == active_template.id
-            ).all()
-            
-            # Apply extraction rules for each field
-            for field in template_fields:
-                try:
-                    extracted_value = apply_extraction_rule(raw_text, field.extraction_rules)
-                    if extracted_value:
-                        extracted_data["extracted_fields"][field.field_name] = {
-                            "value": extracted_value,
-                            "label_ru": field.label_ru,
-                            "extraction_method": field.extraction_rules.get("type", "unknown")
-                        }
-                except Exception as field_error:
-                    print(f"Error extracting field {field.field_name}: {str(field_error)}")
-                    continue
+        # Merge OCR result with metadata
+        final_result = {**ocr_result, "processing_metadata": processing_metadata}
         
-        # Update document with extracted data
-        document.extracted_data = extracted_data
-        document.status = DocumentStatus.COMPLETED
+        # Update document in database
+        document.status = DocumentStatus.COMPLETED if ocr_result.get('success') else DocumentStatus.FAILED
+        document.extracted_data = final_result
         db.commit()
         
-        print(f"Successfully processed document {document_id} with {len(extracted_data['extracted_fields'])} extracted fields")
+        logger.info(f"Background OCR processing completed for document {document_id}")
+        return final_result
         
-    except Exception as e:
-        # Set error status
-        if 'document' in locals():
-            document.status = DocumentStatus.ERROR
-            document.extracted_data = {
-                "error": str(e),
-                "raw_text": locals().get('raw_text', ''),
-                "processing_failed": True
-            }
-            db.commit()
+    except Exception as exc:
+        logger.error(f"Background OCR processing failed for document {document_id}: {exc}")
         
-        print(f"Error processing document {document_id}: {str(e)}")
-        raise e
+        # Update document status to failed
+        try:
+            db = next(get_db())
+            document = db.query(Document).filter(Document.id == document_id).first()
+            if document:
+                document.status = DocumentStatus.FAILED
+                document.extracted_data = {
+                    "error": str(exc),
+                    "failed_at": datetime.utcnow().isoformat(),
+                    "worker_id": self.request.id,
+                    "retry_count": self.request.retries
+                }
+                db.commit()
+        except Exception as db_error:
+            logger.error(f"Failed to update document status: {db_error}")
+        
+        # Retry logic
+        if self.request.retries < self.max_retries:
+            logger.info(f"Retrying OCR processing for document {document_id} (attempt {self.request.retries + 1})")
+            raise self.retry(exc=exc)
+        
+        # Final failure
+        raise exc
     
     finally:
-        db.close()
+        if 'db' in locals():
+            db.close()
 
-def apply_extraction_rule(text: str, extraction_rules: dict) -> str:
+@celery_app.task
+def cleanup_failed_documents():
     """
-    Apply extraction rules to extract specific data from OCR text.
-    
-    Supported rule types:
-    - regex: Extract using regular expression pattern
-    - keyword: Extract text after specific keyword
-    - position: Extract text at specific position
+    Periodic task to clean up documents that have been stuck in processing status
     """
-    rule_type = extraction_rules.get("type")
+    logger.info("Running cleanup task for failed documents")
     
-    if rule_type == "regex":
-        pattern = extraction_rules.get("pattern")
-        if pattern:
-            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-            if match:
-                # Return first capturing group if available, otherwise the full match
-                return match.group(1) if match.groups() else match.group(0)
-    
-    elif rule_type == "keyword":
-        keyword = extraction_rules.get("keyword")
-        if keyword:
-            # Find text after keyword
-            keyword_pos = text.lower().find(keyword.lower())
-            if keyword_pos != -1:
-                # Extract next 50 characters after keyword
-                start_pos = keyword_pos + len(keyword)
-                extracted = text[start_pos:start_pos + 50].strip()
-                # Clean up: take only the first line/word depending on context
-                if extraction_rules.get("extract_type") == "line":
-                    extracted = extracted.split('\n')[0].strip()
-                elif extraction_rules.get("extract_type") == "word":
-                    extracted = extracted.split()[0] if extracted.split() else ""
-                return extracted
-    
-    elif rule_type == "position":
-        # Extract text between specific positions
-        start_pos = extraction_rules.get("start_position", 0)
-        end_pos = extraction_rules.get("end_position", len(text))
-        return text[start_pos:end_pos].strip()
-    
-    return None
+    try:
+        db = next(get_db())
+        
+        # Find documents stuck in processing for more than 1 hour
+        from datetime import datetime, timedelta
+        cutoff_time = datetime.utcnow() - timedelta(hours=1)
+        
+        stuck_documents = db.query(Document).filter(
+            Document.status == DocumentStatus.PROCESSING,
+            Document.updated_at < cutoff_time
+        ).all()
+        
+        for document in stuck_documents:
+            logger.warning(f"Marking stuck document {document.id} as failed")
+            document.status = DocumentStatus.FAILED
+            document.extracted_data = {
+                "error": "Processing timeout - document was stuck in processing status",
+                "failed_at": datetime.utcnow().isoformat(),
+                "cleanup_reason": "automatic_timeout"
+            }
+        
+        db.commit()
+        logger.info(f"Cleaned up {len(stuck_documents)} stuck documents")
+        
+    except Exception as e:
+        logger.error(f"Cleanup task failed: {e}")
+        
+    finally:
+        if 'db' in locals():
+            db.close()
 
-# Test function for manual processing
-def process_document_sync(document_id: int):
-    """Synchronous version for testing without Celery"""
-    return process_document_with_template(document_id)
+@celery_app.task
+def health_check():
+    """Health check task for monitoring worker status"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "worker_id": "enhanced_ocr_worker"
+    }
