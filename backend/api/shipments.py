@@ -1,17 +1,20 @@
 import os
 import uuid
+import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session, selectinload
 
 from core.database import get_db
+from core.exceptions import NotFoundError
 from models.user import User
 from models.shipment import Shipment
 from models.document import Document, DocumentStatus, DocumentType
 from schemas.shipment import ShipmentCreate, ShipmentResponse
 from services.shipment_service import create_shipment, get_shipments_by_user
 from api.auth import get_current_user
-# Import will be handled dynamically to avoid circular dependencies
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -123,36 +126,25 @@ async def upload_documents(
             
             # Process with async OCR service
             try:
+                # Import async OCR service to avoid circular dependencies
+                from services.async_ocr_service import async_ocr_service
+                
                 # Use async OCR service for non-blocking processing
                 processing_result = await async_ocr_service.process_document_async(
                     document_id=document.id,
                     force_background=False  # Let service decide based on file size
                 )
                 
-                # Update shipment with extracted data
-                current_data = shipment.extracted_data if shipment.extracted_data else {}
-                current_data["ocr_text"] = extracted_text
-                current_data["processed_files"] = current_data.get("processed_files", [])
-                current_data["processed_files"].append({
-                    "file_path": file_path,
-                    "extraction_status": "completed",
-                    "text_length": len(extracted_text),
-                    "document_id": document.id
-                })
-                
-                # Update shipment in database
-                db.query(Shipment).filter(Shipment.id == shipment_id).update({
-                    "extracted_data": current_data,
-                    "status": "completed" if extracted_text.strip() else "processing"
-                })
+                # Log OCR processing result
+                logger.info(f"OCR processing result for document {document.id}: {processing_result}")
                     
-            except ImportError:
-                print("OCR processing unavailable - pytesseract not installed")
+            except ImportError as import_error:
+                logger.error(f"OCR processing unavailable: {str(import_error)}")
                 document.status = DocumentStatus.ERROR
                 document.extracted_data = {"error": "OCR processing unavailable"}
                 db.commit()
             except Exception as ocr_error:
-                print(f"OCR processing failed: {str(ocr_error)}")
+                logger.error(f"OCR processing failed: {str(ocr_error)}")
                 document.status = DocumentStatus.ERROR
                 document.extracted_data = {"error": str(ocr_error)}
                 db.commit()

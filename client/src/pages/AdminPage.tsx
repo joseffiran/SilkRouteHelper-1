@@ -18,6 +18,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import AppLayout from "@/components/AppLayout";
+import { TemplateManager } from "@/components/TemplateManager";
 
 // Schema for creating/editing templates
 const templateSchema = z.object({
@@ -795,6 +796,10 @@ export default function AdminPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="template-manager">
+            <TemplateManager />
           </TabsContent>
 
           <TabsContent value="users">
