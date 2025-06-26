@@ -33,8 +33,38 @@ async def read_shipments(
     skip: int = 0,
     limit: int = 100
 ):
-    shipments = get_shipments_by_user(db, user_id=current_user.id, skip=skip, limit=limit)
-    return shipments
+    try:
+        logger.info(f"Fetching shipments for user {current_user.id}")
+        
+        # Simple query without complex relationships to avoid serialization issues
+        shipments = db.query(Shipment).filter(
+            Shipment.user_id == current_user.id
+        ).offset(skip).limit(limit).all()
+        
+        # Clean up any problematic data before returning
+        clean_shipments = []
+        for shipment in shipments:
+            # Create a clean copy with safe data
+            clean_shipment = {
+                "id": shipment.id,
+                "name": shipment.name,
+                "status": shipment.status,
+                "user_id": shipment.user_id,
+                "extracted_data": None if not shipment.extracted_data else shipment.extracted_data,
+                "created_at": shipment.created_at,
+                "updated_at": shipment.updated_at,
+                "documents": []  # Load documents separately if needed
+            }
+            clean_shipments.append(clean_shipment)
+        
+        logger.info(f"Found {len(clean_shipments)} shipments")
+        return clean_shipments
+        
+    except Exception as e:
+        logger.error(f"Error fetching shipments: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error fetching shipments: {str(e)}")
 
 @router.get("/shipments/{shipment_id}", response_model=ShipmentResponse)
 async def read_shipment(
@@ -42,15 +72,25 @@ async def read_shipment(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    shipment = db.query(Shipment).options(
-        selectinload(Shipment.documents)
-    ).filter(
-        Shipment.id == shipment_id,
-        Shipment.user_id == current_user.id
-    ).first()
-    if shipment is None:
-        raise HTTPException(status_code=404, detail="Shipment not found")
-    return shipment
+    try:
+        shipment = db.query(Shipment).options(
+            selectinload(Shipment.documents)
+        ).filter(
+            Shipment.id == shipment_id,
+            Shipment.user_id == current_user.id
+        ).first()
+        
+        if shipment is None:
+            raise HTTPException(status_code=404, detail="Shipment not found")
+        
+        # Skip any data cleaning that may cause issues
+        
+        return shipment
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching shipment {shipment_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching shipment: {str(e)}")
 
 @router.post("/shipments/{shipment_id}/documents", status_code=status.HTTP_202_ACCEPTED)
 async def upload_documents(
@@ -131,7 +171,7 @@ async def upload_documents(
                 
                 # Use async OCR service for non-blocking processing
                 processing_result = await async_ocr_service.process_document_async(
-                    document_id=document.id,
+                    document_id=int(document.id),
                     force_background=False  # Let service decide based on file size
                 )
                 
@@ -140,13 +180,17 @@ async def upload_documents(
                     
             except ImportError as import_error:
                 logger.error(f"OCR processing unavailable: {str(import_error)}")
-                document.status = DocumentStatus.ERROR
-                document.extracted_data = {"error": "OCR processing unavailable"}
+                db.query(Document).filter(Document.id == document.id).update({
+                    "status": DocumentStatus.ERROR.value,
+                    "extracted_data": {"error": "OCR processing unavailable"}
+                })
                 db.commit()
             except Exception as ocr_error:
                 logger.error(f"OCR processing failed: {str(ocr_error)}")
-                document.status = DocumentStatus.ERROR
-                document.extracted_data = {"error": str(ocr_error)}
+                db.query(Document).filter(Document.id == document.id).update({
+                    "status": DocumentStatus.ERROR.value,
+                    "extracted_data": {"error": str(ocr_error)}
+                })
                 db.commit()
         
         # Update shipment status to processing

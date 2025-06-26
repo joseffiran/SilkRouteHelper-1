@@ -15,5 +15,5 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Relationship
-    shipments = relationship("Shipment", back_populates="owner")
+    # Relationships
+    shipments = relationship("Shipment", back_populates="owner", lazy="dynamic")
