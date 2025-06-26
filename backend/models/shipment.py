@@ -16,4 +16,4 @@ class Shipment(Base):
 
     # Relationships
     owner = relationship("User", back_populates="shipments")
-    documents = relationship("Document", back_populates="shipment", cascade="all, delete-orphan", lazy="dynamic")
+    documents = relationship("Document", back_populates="shipment", cascade="all, delete-orphan")

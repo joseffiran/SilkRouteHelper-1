@@ -73,9 +73,8 @@ async def read_shipment(
     db: Session = Depends(get_db)
 ):
     try:
-        shipment = db.query(Shipment).options(
-            selectinload(Shipment.documents)
-        ).filter(
+        # Get shipment without eager loading first
+        shipment = db.query(Shipment).filter(
             Shipment.id == shipment_id,
             Shipment.user_id == current_user.id
         ).first()
@@ -83,9 +82,31 @@ async def read_shipment(
         if shipment is None:
             raise HTTPException(status_code=404, detail="Shipment not found")
         
-        # Skip any data cleaning that may cause issues
+        # Load documents separately to avoid eager loading issues
+        documents = db.query(Document).filter(Document.shipment_id == shipment_id).all()
         
-        return shipment
+        # Create response with documents included
+        shipment_dict = {
+            "id": shipment.id,
+            "name": shipment.name,
+            "status": shipment.status,
+            "user_id": shipment.user_id,
+            "extracted_data": shipment.extracted_data,
+            "created_at": shipment.created_at,
+            "updated_at": shipment.updated_at,
+            "documents": [{
+                "id": doc.id,
+                "document_type": doc.document_type,
+                "original_filename": doc.original_filename,
+                "storage_path": doc.storage_path,
+                "status": doc.status,
+                "extracted_data": doc.extracted_data,
+                "created_at": doc.created_at,
+                "updated_at": doc.updated_at
+            } for doc in documents]
+        }
+        
+        return shipment_dict
     except HTTPException:
         raise
     except Exception as e:

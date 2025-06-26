@@ -1,0 +1,90 @@
+ulation - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:02:27 PM [express] GET /api/v1/shipments/22 500 in 2320ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:02:32 PM [express] GET /api/v1/shipments/22 500 in 1145ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:02:37 PM [express] GET /api/v1/shipments/22 500 in 1138ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:02:42 PM [express] GET /api/v1/shipments/22 500 in 1139ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:02:47 PM [express] GET /api/v1/shipments/22 500 in 1141ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:02:52 PM [express] GET /api/v1/shipments/22 500 in 1140ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:02:57 PM [express] GET /api/v1/shipments/22 500 in 1138ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:03:02 PM [express] GET /api/v1/shipments/22 500 in 1141ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:03:07 PM [express] GET /api/v1/shipments/22 500 in 1138ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:03:13 PM [express] GET /api/v1/shipments/22 500 in 2247ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:03:18 PM [express] GET /api/v1/shipments/22 500 in 1138ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:03:23 PM [express] GET /api/v1/shipments/22 500 in 1120ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:03:28 PM [express] GET /api/v1/shipments/22 500 in 1138ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:03:33 PM [express] GET /api/v1/shipments/22 500 in 1121ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:48316 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:45100 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+INFO:middleware.error_handler:API Request: GET /api/v1/me
+INFO:middleware.error_handler:API Response: GET /api/v1/me - 200
+INFO:     127.0.0.1:45100 - "GET /api/v1/me HTTP/1.1" 200 OK
+4:12:06 PM [express] GET /api/v1/me 304 in 2115ms
+INFO:middleware.error_handler:API Request: GET /api/v1/shipments/22
+ERROR:api.shipments:Error fetching shipment 22: 'Shipment.documents' does not support object population - eager loading cannot be applied.
+INFO:middleware.error_handler:API Response: GET /api/v1/shipments/22 - 500
+INFO:     127.0.0.1:45100 - "GET /api/v1/shipments/22 HTTP/1.1" 500 Internal Server Error
+4:12:07 PM [express] GET /api/v1/shipments/22 500 in 1164ms
+INFO:middleware.error_handler:API Request: GET /api/v1/me
+INFO:middleware.error_handler:API Response: GET /api/v1/me - 401
+INFO:     127.0.0.1:45100 - "GET /api/v1/me HTTP/1.1" 401 Unauthorized
+4:12:08 PM [express] GET /api/v1/me 401 in 4ms
