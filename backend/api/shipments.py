@@ -96,6 +96,7 @@ async def read_shipment(
             "updated_at": shipment.updated_at,
             "documents": [{
                 "id": doc.id,
+                "shipment_id": doc.shipment_id,
                 "document_type": doc.document_type,
                 "original_filename": doc.original_filename,
                 "storage_path": doc.storage_path,
