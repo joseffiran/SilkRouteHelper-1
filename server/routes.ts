@@ -14,6 +14,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     stdio: "inherit",
   });
 
+  // Phase 1: Universal Template System API Routes
+  // Get all templates
+  app.get("/api/templates", async (req, res) => {
+    try {
+      const response = await fetch("http://localhost:8000/api/v1/declarations/templates", {
+        headers: req.headers.authorization ? { Authorization: req.headers.authorization } : {}
+      });
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ error: "Failed to fetch templates" });
+      }
+      
+      const templates = await response.json();
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ error: "Template service unavailable" });
+    }
+  });
+
+  // Get template by ID
+  app.get("/api/templates/:id", async (req, res) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/declarations/templates/${req.params.id}/preview`, {
+        headers: req.headers.authorization ? { Authorization: req.headers.authorization } : {}
+      });
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ error: "Template not found" });
+      }
+      
+      const template = await response.json();
+      res.json(template);
+    } catch (error) {
+      res.status(500).json({ error: "Template service unavailable" });
+    }
+  });
+
   // Setup multer for file uploads
   const upload = multer({ storage: multer.memoryStorage() });
 

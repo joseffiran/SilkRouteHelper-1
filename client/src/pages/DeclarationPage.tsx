@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText, Zap, CheckCircle, AlertTriangle } from "lucide-react";
+import { Upload, FileText, Zap, CheckCircle, AlertTriangle, Settings, Plus } from "lucide-react";
 import DeclarationViewer from "@/components/DeclarationViewer";
+import TemplateStudio from "@/components/TemplateStudio";
 import { apiRequest } from "@/lib/queryClient";
+import AppLayout from "@/components/AppLayout";
 
 interface Template {
   id: number;
@@ -31,7 +33,7 @@ export default function DeclarationPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<number | null>(null);
   const [extractedData, setExtractedData] = useState<any>({});
-  const [activeTab, setActiveTab] = useState("templates");
+  const [activeTab, setActiveTab] = useState("studio");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -138,26 +140,32 @@ export default function DeclarationPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Генератор Деклараций</h1>
-          <p className="text-muted-foreground">
-            Автоматическое заполнение таможенных деклараций с помощью OCR
-          </p>
+    <AppLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Universal Declaration System</h1>
+            <p className="text-muted-foreground">
+              Configure templates, process documents, and generate declarations automatically
+            </p>
+          </div>
+          <Badge variant="outline" className="gap-2">
+            <Settings className="h-4 w-4" />
+            Phase 1: Template Studio
+          </Badge>
         </div>
-        <Badge variant="outline" className="gap-2">
-          <Zap className="h-4 w-4" />
-          ИИ-Автозаполнение
-        </Badge>
-      </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="templates">1. Выбор Шаблона</TabsTrigger>
-          <TabsTrigger value="documents">2. Загрузка Документов</TabsTrigger>
-          <TabsTrigger value="declaration">3. Готовая Декларация</TabsTrigger>
-        </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="studio">Template Studio</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="generation">Generation</TabsTrigger>
+          </TabsList>
+
+        <TabsContent value="studio" className="space-y-6">
+          <TemplateStudio />
+        </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
           <Card>
@@ -354,7 +362,8 @@ export default function DeclarationPage() {
             </Card>
           )}
         </TabsContent>
-      </Tabs>
-    </div>
+        </Tabs>
+      </div>
+    </AppLayout>
   );
 }
