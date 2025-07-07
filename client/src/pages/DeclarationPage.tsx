@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, FileText, Zap, CheckCircle, AlertTriangle, Settings, Plus } from "lucide-react";
 import DeclarationViewer from "@/components/DeclarationViewer";
 import TemplateStudio from "@/components/TemplateStudio";
+import DocumentTypeManager from "@/components/DocumentTypeManager";
 import { apiRequest } from "@/lib/queryClient";
 import AppLayout from "@/components/AppLayout";
 
@@ -165,6 +166,10 @@ export default function DeclarationPage() {
 
         <TabsContent value="studio" className="space-y-6">
           <TemplateStudio />
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-6">
+          <DocumentTypeManager />
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">

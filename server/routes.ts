@@ -33,6 +33,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Phase 1 Step 2: Document Type Configuration API Routes
+  // Get all document types
+  app.get("/api/document-types", async (req, res) => {
+    try {
+      // For now, return mock data since backend doesn't have document types yet
+      const documentTypes = [
+        {
+          id: 1,
+          name: "Russian Customs Declaration",
+          category: "customs",
+          description: "Russian Federation customs declaration form",
+          file_extensions: [".pdf", ".jpg", ".png"],
+          ocr_config: {
+            language: "rus+eng",
+            preprocessing: true,
+            confidence_threshold: 0.8
+          },
+          validation_rules: [],
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          name: "Commercial Invoice",
+          category: "invoice",
+          description: "International commercial invoice document",
+          file_extensions: [".pdf", ".doc", ".docx"],
+          ocr_config: {
+            language: "auto",
+            preprocessing: true,
+            confidence_threshold: 0.85
+          },
+          validation_rules: [],
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 3,
+          name: "Shipping Manifest",
+          category: "shipping",
+          description: "Cargo shipping manifest and bill of lading",
+          file_extensions: [".pdf", ".xlsx"],
+          ocr_config: {
+            language: "eng",
+            preprocessing: true,
+            confidence_threshold: 0.9
+          },
+          validation_rules: [],
+          is_active: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      res.json(documentTypes);
+    } catch (error) {
+      res.status(500).json({ error: "Document type service unavailable" });
+    }
+  });
+
+  // Create document type
+  app.post("/api/document-types", async (req, res) => {
+    try {
+      // Mock creation for now
+      const newDocumentType = {
+        id: Date.now(),
+        ...req.body,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      res.status(201).json(newDocumentType);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create document type" });
+    }
+  });
+
+  // Update document type
+  app.put("/api/document-types/:id", async (req, res) => {
+    try {
+      const updatedDocumentType = {
+        id: parseInt(req.params.id),
+        ...req.body,
+        updated_at: new Date().toISOString()
+      };
+      res.json(updatedDocumentType);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update document type" });
+    }
+  });
+
+  // Delete document type
+  app.delete("/api/document-types/:id", async (req, res) => {
+    try {
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete document type" });
+    }
+  });
+
   // Get template by ID
   app.get("/api/templates/:id", async (req, res) => {
     try {
